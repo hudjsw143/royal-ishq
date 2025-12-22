@@ -64,7 +64,8 @@ const Index = () => {
     } else if (mode === "online") {
       setShowOnlineSelector(true);
     } else {
-      // AI mode - start directly
+      // AI mode - start directly with casual mood
+      setGameMood("casual");
       setCurrentScreen("game");
     }
   };
@@ -89,6 +90,18 @@ const Index = () => {
   const handleEditProfile = () => {
     setIsEditingProfile(true);
     setCurrentScreen("details");
+  };
+
+  const handleLogout = () => {
+    // Clear local storage
+    localStorage.removeItem("royalIshq_userDetails");
+    // Reset user details
+    setUserDetails(null);
+    // Reset game state
+    setGameMode(null);
+    setGameMood(null);
+    // Navigate to login screen
+    setCurrentScreen("login");
   };
 
   const getOpponentInfo = () => {
@@ -126,6 +139,7 @@ const Index = () => {
             userDetails={userDetails}
             onStartGame={handleStartGame}
             onEditProfile={handleEditProfile}
+            onLogout={handleLogout}
           />
         )}
 
@@ -133,7 +147,8 @@ const Index = () => {
           <GameBoard
             key="game"
             mode={gameMode}
-            mood={gameMood || undefined}
+            mood={gameMood || "casual"}
+            relationshipStatus={userDetails.status || "relationship"}
             currentPlayer={{
               name: userDetails.name,
               photo: userDetails.profilePhoto,
