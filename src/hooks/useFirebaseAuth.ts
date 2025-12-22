@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   signInWithPopup,
   signInWithPhoneNumber,
+  signInAnonymously as firebaseSignInAnonymously,
   signOut,
   onAuthStateChanged,
   ConfirmationResult,
@@ -16,6 +17,7 @@ interface UseFirebaseAuthReturn {
   error: string | null;
   confirmationResult: ConfirmationResult | null;
   signInWithGoogle: () => Promise<boolean>;
+  signInAsGuest: () => Promise<boolean>;
   sendOtp: (phoneNumber: string) => Promise<boolean>;
   verifyOtp: (otp: string) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -59,6 +61,32 @@ export const useFirebaseAuth = (): UseFirebaseAuthReturn => {
       setError(errorMessage);
       toast({
         title: "Sign in failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Guest Sign-In (Anonymous)
+  const signInAsGuest = useCallback(async (): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await firebaseSignInAnonymously(auth);
+      setUser(result.user);
+      toast({
+        title: "Welcome, Guest!",
+        description: "You're playing as a guest. Sign in later to save your progress.",
+      });
+      return true;
+    } catch (err: any) {
+      const errorMessage = getAuthErrorMessage(err.code);
+      setError(errorMessage);
+      toast({
+        title: "Guest login failed",
         description: errorMessage,
         variant: "destructive",
       });
@@ -154,6 +182,7 @@ export const useFirebaseAuth = (): UseFirebaseAuthReturn => {
     error,
     confirmationResult,
     signInWithGoogle,
+    signInAsGuest,
     sendOtp,
     verifyOtp,
     logout,
