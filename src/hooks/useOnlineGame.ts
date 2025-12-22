@@ -28,6 +28,11 @@ export interface GameState {
     guest: number;
   };
   roundsPlayed: number;
+  // New: Track who is ready for the next round
+  readyForNextRound?: {
+    host: boolean;
+    guest: boolean;
+  };
 }
 
 export interface ChatMessage {
@@ -70,6 +75,7 @@ interface UseOnlineGameReturn {
   setCurrentCard: (card: GameState["currentCard"]) => Promise<void>;
   updateScores: (winner: "host" | "guest") => Promise<void>;
   startNewRound: () => Promise<void>;
+  toggleReadyForNextRound: () => Promise<void>;
   subscribeToExistingRoom: (code: string, host: boolean) => void;
   manualReconnect: () => Promise<void>;
   sendMessage: (content: string, type: "text" | "emoji") => Promise<void>;
@@ -717,7 +723,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     }
   }, [roomCode, roomData]);
 
-  // Start new round
+  // Start new round (only called when both players are ready)
   const startNewRound = useCallback(async () => {
     if (!roomCode || !roomData) return;
 
@@ -731,11 +737,39 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
         gamePhase: "tic-tac-toe",
         loser: null,
         currentCard: null,
+        readyForNextRound: { host: false, guest: false },
       });
     } catch (err) {
       console.error("Start new round error:", err);
     }
   }, [roomCode, roomData]);
+
+  // Toggle ready state for next round
+  const toggleReadyForNextRound = useCallback(async () => {
+    if (!roomCode || !roomData) return;
+
+    try {
+      const currentReady = roomData.gameState.readyForNextRound || { host: false, guest: false };
+      const playerKey = isHost ? "host" : "guest";
+      const newReadyState = {
+        ...currentReady,
+        [playerKey]: !currentReady[playerKey],
+      };
+
+      await update(ref(database, `rooms/${roomCode}/gameState`), {
+        readyForNextRound: newReadyState,
+      });
+
+      // If both players are now ready, auto-start the new round
+      if (newReadyState.host && newReadyState.guest) {
+        setTimeout(() => {
+          startNewRound();
+        }, 500);
+      }
+    } catch (err) {
+      console.error("Toggle ready error:", err);
+    }
+  }, [roomCode, roomData, isHost, startNewRound]);
 
   // Manual reconnect function
   const manualReconnect = useCallback(async () => {
@@ -806,6 +840,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     setCurrentCard,
     updateScores,
     startNewRound,
+    toggleReadyForNextRound,
     subscribeToExistingRoom,
     manualReconnect,
     sendMessage,

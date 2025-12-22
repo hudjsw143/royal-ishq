@@ -75,20 +75,26 @@ const OnlineRoomSelector = ({
     
     const shareUrl = `${window.location.origin}?room=${roomCode}`;
     
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: "Join me on Royal Ishq!",
           text: `Join my game room with code: ${roomCode}`,
           url: shareUrl,
         });
-      } catch (err) {
-        console.log("Error sharing:", err);
-        handleCopyCode();
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success("Share link copied!");
       }
-    } else {
-      navigator.clipboard.writeText(shareUrl);
-      toast.success("Share link copied!");
+    } catch (err) {
+      // User cancelled or share failed, fallback to copy
+      console.log("Share cancelled or failed:", err);
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success("Share link copied!");
+      } catch (clipboardErr) {
+        toast.error("Could not copy link");
+      }
     }
   };
 

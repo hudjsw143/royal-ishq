@@ -35,6 +35,7 @@ const OnlineGameBoard = ({
     setCurrentCard,
     updateScores,
     startNewRound,
+    toggleReadyForNextRound,
     leaveRoom,
     subscribeToExistingRoom,
     sendMessage,
@@ -119,8 +120,9 @@ const OnlineGameBoard = ({
       const mood = roomData.mood || "casual";
       const status = roomData.status || "relationship";
       
+      // Filter for ONLINE mode prompts only (distance-friendly)
       const filteredPrompts = ALL_PROMPTS.filter(
-        p => p.type === type && p.mood === mood && p.status === status
+        p => p.type === type && p.mode === "online" && p.mood === mood && p.status === status
       );
       
       const randomPrompt = filteredPrompts[Math.floor(Math.random() * filteredPrompts.length)];
@@ -156,10 +158,28 @@ const OnlineGameBoard = ({
     setCardRevealed(false);
   };
 
+  const handleToggleReady = async () => {
+    await toggleReadyForNextRound();
+  };
+
   const handleNewRound = async () => {
     await startNewRound();
     setShowCard(false);
     setCardRevealed(false);
+  };
+
+  // Check if current player is ready
+  const amIReady = () => {
+    const ready = roomData?.gameState?.readyForNextRound;
+    if (!ready) return false;
+    return isHost ? ready.host : ready.guest;
+  };
+
+  // Check if partner is ready
+  const isPartnerReady = () => {
+    const ready = roomData?.gameState?.readyForNextRound;
+    if (!ready) return false;
+    return isHost ? ready.guest : ready.host;
   };
 
   return (
@@ -204,7 +224,7 @@ const OnlineGameBoard = ({
             </div>
           </div>
 
-          {/* Opponent Info */}
+          {/* Opponent Info - Right side */}
           <div className="flex items-center gap-3">
             <div className="text-right">
               <p className="font-medium text-foreground">{opponentInfo?.name || "Partner"}</p>
@@ -222,7 +242,7 @@ const OnlineGameBoard = ({
                 )}
               </div>
             </div>
-            <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-secondary/30">
+            <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-primary/50">
               {opponentInfo?.photo ? (
                 <img
                   src={opponentInfo.photo}
@@ -476,18 +496,45 @@ const OnlineGameBoard = ({
               >
                 <div className="text-6xl mb-4">✨</div>
                 <h2 className="font-display text-2xl text-foreground mb-2">Challenge Complete!</h2>
-                <p className="text-muted-foreground mb-6">Ready for the next round?</p>
+                <p className="text-muted-foreground mb-6">Both players must agree to continue</p>
                 
                 <div className="flex items-center justify-center gap-4 mb-6">
-                  <div className="text-center px-6 py-3 rounded-xl bg-card/50 border border-border/30">
+                  <div className={`text-center px-6 py-3 rounded-xl border ${
+                    roomData.gameState.readyForNextRound?.host 
+                      ? "bg-green-500/20 border-green-500/50" 
+                      : "bg-card/50 border-border/30"
+                  }`}>
                     <p className="text-xs text-muted-foreground">{roomData.host.name}</p>
                     <p className="text-2xl font-bold text-secondary">{scores.host}</p>
+                    <p className="text-xs mt-1">
+                      {roomData.gameState.readyForNextRound?.host ? "✅ Ready" : "⏳ Waiting"}
+                    </p>
                   </div>
                   <span className="text-muted-foreground">vs</span>
-                  <div className="text-center px-6 py-3 rounded-xl bg-card/50 border border-border/30">
+                  <div className={`text-center px-6 py-3 rounded-xl border ${
+                    roomData.gameState.readyForNextRound?.guest 
+                      ? "bg-green-500/20 border-green-500/50" 
+                      : "bg-card/50 border-border/30"
+                  }`}>
                     <p className="text-xs text-muted-foreground">{roomData.guest?.name || "Partner"}</p>
                     <p className="text-2xl font-bold text-primary">{scores.guest}</p>
+                    <p className="text-xs mt-1">
+                      {roomData.gameState.readyForNextRound?.guest ? "✅ Ready" : "⏳ Waiting"}
+                    </p>
                   </div>
+                </div>
+
+                {/* Ready Status Message */}
+                <div className="mb-6 px-4 py-2 rounded-lg bg-muted/30 inline-block">
+                  {amIReady() && isPartnerReady() ? (
+                    <p className="text-green-500 font-medium animate-pulse">Starting new round...</p>
+                  ) : amIReady() ? (
+                    <p className="text-muted-foreground">Waiting for {isHost ? roomData.guest?.name : roomData.host.name} to be ready...</p>
+                  ) : isPartnerReady() ? (
+                    <p className="text-secondary font-medium">{isHost ? roomData.guest?.name : roomData.host.name} is ready! Tap below to continue</p>
+                  ) : (
+                    <p className="text-muted-foreground">Tap "Ready" when you want to continue</p>
+                  )}
                 </div>
 
                 <div className="flex gap-3 justify-center">
@@ -500,12 +547,21 @@ const OnlineGameBoard = ({
                     Leave Game
                   </Button>
                   <Button
-                    variant="gold"
+                    variant={amIReady() ? "outline" : "gold"}
                     size="lg"
-                    onClick={handleNewRound}
+                    onClick={handleToggleReady}
                   >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    New Round
+                    {amIReady() ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Ready!
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        I'm Ready
+                      </>
+                    )}
                   </Button>
                 </div>
               </motion.div>
@@ -513,29 +569,27 @@ const OnlineGameBoard = ({
           </AnimatePresence>
         </main>
 
-        {/* Footer */}
+        {/* Footer - Your profile on left */}
         <footer className="p-4">
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-secondary/50">
-                {currentPlayer.photo ? (
-                  <img
-                    src={currentPlayer.photo}
-                    alt={currentPlayer.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-muted text-sm font-semibold text-muted-foreground">
-                    {currentPlayer.name.charAt(0)}
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-foreground">{currentPlayer.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  You are {isHost ? "👑" : "❤️"}
-                </p>
-              </div>
+          <div className="flex items-center justify-start gap-3">
+            <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-secondary/50">
+              {currentPlayer.photo ? (
+                <img
+                  src={currentPlayer.photo}
+                  alt={currentPlayer.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-muted text-sm font-semibold text-muted-foreground">
+                  {currentPlayer.name.charAt(0)}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="font-medium text-foreground">{currentPlayer.name}</p>
+              <p className="text-xs text-muted-foreground">
+                You are {isHost ? "👑" : "❤️"}
+              </p>
             </div>
           </div>
         </footer>
