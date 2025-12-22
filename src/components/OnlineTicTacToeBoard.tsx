@@ -23,8 +23,8 @@ const OnlineTicTacToeBoard = ({
 }: OnlineTicTacToeBoardProps) => {
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
   
-  const board = roomData.gameState.board;
-  const currentTurn = roomData.gameState.currentTurn;
+  const board = roomData?.gameState?.board || Array(9).fill(null);
+  const currentTurn = roomData?.gameState?.currentTurn || "host";
   const isMyTurn = (isHost && currentTurn === "host") || (!isHost && currentTurn === "guest");
   const mySymbol = isHost ? "👑" : "❤️";
   const opponentSymbol = isHost ? "❤️" : "👑";
