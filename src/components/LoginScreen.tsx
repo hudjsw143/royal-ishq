@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Phone, Mail, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { Phone, Mail, ArrowRight, Sparkles, Loader2, UserCircle2 } from "lucide-react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 
@@ -16,7 +16,8 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   const [otp, setOtp] = useState("");
   
   const { 
-    signInWithGoogle, 
+    signInWithGoogle,
+    signInAsGuest,
     sendOtp, 
     verifyOtp, 
     loading, 
@@ -46,6 +47,13 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
       if (success) {
         onLogin();
       }
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    const success = await signInAsGuest();
+    if (success) {
+      onLogin();
     }
   };
 
@@ -172,6 +180,31 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                 </div>
                 <span>Continue with Phone</span>
               </Button>
+
+              {/* Divider */}
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/50" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card/80 px-3 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              {/* Guest Login */}
+              <Button
+                variant="ghost"
+                size="lg"
+                className="w-full justify-center gap-2 text-muted-foreground hover:text-foreground"
+                onClick={handleGuestLogin}
+                disabled={loading}
+              >
+                <UserCircle2 className="h-5 w-5" />
+                <span>Continue as Guest</span>
+              </Button>
+              <p className="text-center text-xs text-muted-foreground/70">
+                Play without signing in
+              </p>
             </motion.div>
           )}
 
