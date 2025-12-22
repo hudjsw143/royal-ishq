@@ -4,13 +4,13 @@ import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAISZyrReGPKL78m93ebFELrN21zDJX2sg",
-  authDomain: "royal-ishq-bikram.firebaseapp.com",
-  databaseURL: "https://royal-ishq-bikram-default-rtdb.firebaseio.com",
-  projectId: "royal-ishq-bikram",
-  storageBucket: "royal-ishq-bikram.firebasestorage.app",
-  messagingSenderId: "677986512758",
-  appId: "1:677986512758:web:60b67c0da583475fed5457"
+  apiKey: "AIzaSyCSC6_6VJxsOWOZ6LuXcBjFFmpA7-RD6og",
+  authDomain: "royal-ishq.firebaseapp.com",
+  projectId: "royal-ishq",
+  storageBucket: "royal-ishq.firebasestorage.app",
+  messagingSenderId: "178909054252",
+  appId: "1:178909054252:web:4ed2961dcf9a6033b61889",
+  measurementId: "G-MPM6658DRC"
 };
 
 // Initialize Firebase
