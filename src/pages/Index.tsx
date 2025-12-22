@@ -7,8 +7,9 @@ import Lobby from "@/components/Lobby";
 import MoodSelector from "@/components/MoodSelector";
 import OnlineRoomSelector from "@/components/OnlineRoomSelector";
 import GameBoard from "@/components/GameBoard";
+import OnlineGameBoard from "@/components/OnlineGameBoard";
 
-type AppScreen = "boot" | "login" | "details" | "lobby" | "game";
+type AppScreen = "boot" | "login" | "details" | "lobby" | "game" | "online-game";
 type GameMode = "offline" | "ai" | "online";
 
 interface UserDetails {
@@ -28,6 +29,8 @@ const Index = () => {
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [showOnlineSelector, setShowOnlineSelector] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [onlineRoomCode, setOnlineRoomCode] = useState<string | null>(null);
+  const [isOnlineHost, setIsOnlineHost] = useState(false);
 
   // Check for existing user session
   useEffect(() => {
@@ -36,6 +39,16 @@ const Index = () => {
       setUserDetails(JSON.parse(savedDetails));
     }
   }, []);
+
+  // Check for room code in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get("room");
+    if (roomParam && userDetails) {
+      setOnlineRoomCode(roomParam);
+      setShowOnlineSelector(true);
+    }
+  }, [userDetails]);
 
   const handleBootComplete = () => {
     if (userDetails) {
@@ -76,15 +89,21 @@ const Index = () => {
     setCurrentScreen("game");
   };
 
-  const handleOnlineRoomAction = () => {
+  const handleOnlineRoomReady = (roomCode: string, isHost: boolean) => {
+    setOnlineRoomCode(roomCode);
+    setIsOnlineHost(isHost);
     setShowOnlineSelector(false);
-    setCurrentScreen("game");
+    setCurrentScreen("online-game");
+    // Clear URL params
+    window.history.replaceState({}, "", window.location.pathname);
   };
 
   const handleBackToLobby = () => {
     setCurrentScreen("lobby");
     setGameMode(null);
     setGameMood(null);
+    setOnlineRoomCode(null);
+    setIsOnlineHost(false);
   };
 
   const handleEditProfile = () => {
@@ -93,14 +112,11 @@ const Index = () => {
   };
 
   const handleLogout = () => {
-    // Clear local storage
     localStorage.removeItem("royalIshq_userDetails");
-    // Reset user details
     setUserDetails(null);
-    // Reset game state
     setGameMode(null);
     setGameMood(null);
-    // Navigate to login screen
+    setOnlineRoomCode(null);
     setCurrentScreen("login");
   };
 
@@ -157,6 +173,19 @@ const Index = () => {
             onBack={handleBackToLobby}
           />
         )}
+
+        {currentScreen === "online-game" && userDetails && onlineRoomCode && (
+          <OnlineGameBoard
+            key="online-game"
+            roomCode={onlineRoomCode}
+            isHost={isOnlineHost}
+            currentPlayer={{
+              name: userDetails.name,
+              photo: userDetails.profilePhoto,
+            }}
+            onBack={handleBackToLobby}
+          />
+        )}
       </AnimatePresence>
 
       {/* Modals */}
@@ -167,12 +196,20 @@ const Index = () => {
         onSelectMood={handleMoodSelect}
       />
 
-      <OnlineRoomSelector
-        isOpen={showOnlineSelector}
-        onClose={() => setShowOnlineSelector(false)}
-        onJoinRoom={handleOnlineRoomAction}
-        onCreateRoom={handleOnlineRoomAction}
-      />
+      {userDetails && (
+        <OnlineRoomSelector
+          isOpen={showOnlineSelector}
+          onClose={() => {
+            setShowOnlineSelector(false);
+            setOnlineRoomCode(null);
+          }}
+          onRoomReady={handleOnlineRoomReady}
+          playerName={userDetails.name}
+          playerPhoto={userDetails.profilePhoto}
+          mood={gameMood || "casual"}
+          status={userDetails.status || "relationship"}
+        />
+      )}
     </div>
   );
 };
