@@ -7,6 +7,8 @@ import Lobby from "@/components/Lobby";
 import MoodSelector from "@/components/MoodSelector";
 import OnlineRoomSelector from "@/components/OnlineRoomSelector";
 import GameBoard from "@/components/GameBoard";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 
 type AppScreen = "boot" | "login" | "details" | "lobby" | "game";
 type GameMode = "offline" | "ai" | "online";
@@ -91,6 +93,17 @@ const Index = () => {
     setCurrentScreen("details");
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem("royalIshq_userDetails");
+      setUserDetails(null);
+      setCurrentScreen("login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   const getOpponentInfo = () => {
     if (!userDetails) return { name: "Partner", photo: null };
     
@@ -126,6 +139,7 @@ const Index = () => {
             userDetails={userDetails}
             onStartGame={handleStartGame}
             onEditProfile={handleEditProfile}
+            onLogout={handleLogout}
           />
         )}
 

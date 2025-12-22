@@ -1,7 +1,17 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { X, Edit3, Music, MessageCircle, Volume2, VolumeX } from "lucide-react";
+import { X, Edit3, Music, MessageCircle, Volume2, VolumeX, LogOut } from "lucide-react";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface UserDetails {
   name: string;
@@ -17,6 +27,7 @@ interface ProfilePanelProps {
   onClose: () => void;
   userDetails: UserDetails;
   onEditProfile: () => void;
+  onLogout: () => void;
 }
 
 const ProfilePanel = ({
@@ -24,8 +35,10 @@ const ProfilePanel = ({
   onClose,
   userDetails,
   onEditProfile,
+  onLogout,
 }: ProfilePanelProps) => {
   const [isMuted, setIsMuted] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const menuItems = [
     {
@@ -48,139 +61,183 @@ const ProfilePanel = ({
     },
   ];
 
+  const handleLogoutConfirm = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
+  };
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
-            onClick={onClose}
-          />
-
-          {/* Panel */}
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 z-50 h-full w-[85%] max-w-sm bg-gradient-to-b from-card to-background shadow-2xl"
-          >
-            {/* Close Button */}
-            <button
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
               onClick={onClose}
-              className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            />
+
+            {/* Panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 z-50 h-full w-[85%] max-w-sm bg-gradient-to-b from-card to-background shadow-2xl"
             >
-              <X className="h-5 w-5" />
-            </button>
+              {/* Close Button */}
+              <button
+                onClick={onClose}
+                className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
 
-            {/* Content */}
-            <div className="flex h-full flex-col pt-20">
-              {/* Profile Header */}
-              <div className="flex flex-col items-center px-6 pb-6">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="relative mb-4"
-                >
-                  <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-secondary/30 shadow-gold">
-                    {userDetails.profilePhoto ? (
-                      <img
-                        src={userDetails.profilePhoto}
-                        alt={userDetails.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-muted text-3xl font-bold text-muted-foreground">
-                        {userDetails.name.charAt(0).toUpperCase()}
+              {/* Content */}
+              <div className="flex h-full flex-col pt-20">
+                {/* Profile Header */}
+                <div className="flex flex-col items-center px-6 pb-6">
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="relative mb-4"
+                  >
+                    <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-secondary/30 shadow-gold">
+                      {userDetails.profilePhoto ? (
+                        <img
+                          src={userDetails.profilePhoto}
+                          alt={userDetails.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-muted text-3xl font-bold text-muted-foreground">
+                          {userDetails.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+
+                  <motion.h2
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="font-display text-2xl font-semibold text-foreground"
+                  >
+                    {userDetails.name}
+                  </motion.h2>
+
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="mt-1 text-sm text-muted-foreground"
+                  >
+                    {userDetails.status === "married" ? "Married to" : "In love with"}{" "}
+                    <span className="text-secondary">{userDetails.partnerName}</span>
+                  </motion.p>
+                </div>
+
+                {/* Divider */}
+                <div className="mx-6 h-px bg-border/50" />
+
+                {/* Menu Items */}
+                <div className="flex-1 px-4 py-4">
+                  {menuItems.map((item, index) => (
+                    <motion.button
+                      key={item.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.25 + index * 0.05 }}
+                      onClick={item.onClick}
+                      className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left transition-colors hover:bg-muted/50"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                        <item.icon className="h-5 w-5 text-secondary" />
                       </div>
-                    )}
-                  </div>
-                </motion.div>
+                      <span className="font-medium text-foreground">{item.label}</span>
+                    </motion.button>
+                  ))}
 
-                <motion.h2
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                  className="font-display text-2xl font-semibold text-foreground"
-                >
-                  {userDetails.name}
-                </motion.h2>
-
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="mt-1 text-sm text-muted-foreground"
-                >
-                  {userDetails.status === "married" ? "Married to" : "In love with"}{" "}
-                  <span className="text-secondary">{userDetails.partnerName}</span>
-                </motion.p>
-              </div>
-
-              {/* Divider */}
-              <div className="mx-6 h-px bg-border/50" />
-
-              {/* Menu Items */}
-              <div className="flex-1 px-4 py-4">
-                {menuItems.map((item, index) => (
+                  {/* Logout Button */}
                   <motion.button
-                    key={item.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.25 + index * 0.05 }}
-                    onClick={item.onClick}
-                    className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left transition-colors hover:bg-muted/50"
+                    transition={{ delay: 0.4 }}
+                    onClick={() => setShowLogoutConfirm(true)}
+                    className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left transition-colors hover:bg-destructive/10"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                      <item.icon className="h-5 w-5 text-secondary" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/20">
+                      <LogOut className="h-5 w-5 text-destructive" />
                     </div>
-                    <span className="font-medium text-foreground">{item.label}</span>
+                    <span className="font-medium text-destructive">Logout</span>
                   </motion.button>
-                ))}
-              </div>
-
-              {/* Audio Controls */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="border-t border-border/50 p-4"
-              >
-                <p className="mb-3 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Background Music
-                </p>
-                <div className="flex gap-3">
-                  <Button
-                    variant="glass"
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setIsMuted(false)}
-                  >
-                    <Volume2 className="mr-2 h-4 w-4" />
-                    Play
-                  </Button>
-                  <Button
-                    variant="glass"
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setIsMuted(true)}
-                  >
-                    <VolumeX className="mr-2 h-4 w-4" />
-                    Mute
-                  </Button>
                 </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+
+                {/* Audio Controls */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 }}
+                  className="border-t border-border/50 p-4"
+                >
+                  <p className="mb-3 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Background Music
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="glass"
+                      size="lg"
+                      className="flex-1"
+                      onClick={() => setIsMuted(false)}
+                    >
+                      <Volume2 className="mr-2 h-4 w-4" />
+                      Play
+                    </Button>
+                    <Button
+                      variant="glass"
+                      size="lg"
+                      className="flex-1"
+                      onClick={() => setIsMuted(true)}
+                    >
+                      <VolumeX className="mr-2 h-4 w-4" />
+                      Mute
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">Logout</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Are you sure you want to logout? You'll need to sign in again to continue playing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border text-foreground hover:bg-muted">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogoutConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
