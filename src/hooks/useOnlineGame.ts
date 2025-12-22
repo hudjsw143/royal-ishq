@@ -142,6 +142,48 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     }
   }, []);
 
+  // Subscribe to room updates - MUST be defined before attemptReconnect
+  const subscribeToRoom = useCallback((code: string) => {
+    // Clean up existing subscription
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+    
+    const roomReference = ref(database, `rooms/${code}`);
+    roomRef.current = roomReference;
+
+    const unsubscribe = onValue(roomReference, (snapshot) => {
+      const data = snapshot.val() as RoomData | null;
+      
+      if (!data) {
+        setRoomData(null);
+        setIsConnected(false);
+        setOpponentConnected(false);
+        setConnectionState("disconnected");
+        return;
+      }
+
+      setRoomData(data);
+      setIsConnected(true);
+      setConnectionState("connected");
+
+      // Check opponent connection
+      const userId = auth.currentUser?.uid;
+      if (data.host?.id === userId) {
+        setOpponentConnected(data.guest?.isConnected || false);
+      } else if (data.guest?.id === userId) {
+        setOpponentConnected(data.host?.isConnected || false);
+      }
+    }, (err) => {
+      console.error("[Room Subscription] Error:", err);
+      setError("Failed to sync with room");
+      setIsConnected(false);
+      setConnectionState("disconnected");
+    });
+
+    unsubscribeRef.current = unsubscribe;
+  }, []);
+
   // Core reconnection logic with exponential backoff
   const attemptReconnect = useCallback(async (): Promise<boolean> => {
     const code = lastRoomCodeRef.current;
@@ -231,61 +273,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     setConnectionState("disconnected");
     isReconnectingRef.current = false;
     return false;
-  }, [getReconnectDelay, showToast]);
-
-  // Manual reconnect function
-  const manualReconnect = useCallback(async () => {
-    if (!lastRoomCodeRef.current) {
-      showToast("error", "No room to reconnect to");
-      return;
-    }
-    
-    setReconnectAttempts(0);
-    isReconnectingRef.current = false;
-    await attemptReconnect();
-  }, [attemptReconnect, showToast]);
-
-  // Subscribe to room updates
-  const subscribeToRoom = useCallback((code: string) => {
-    // Clean up existing subscription
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-    }
-    
-    const roomReference = ref(database, `rooms/${code}`);
-    roomRef.current = roomReference;
-
-    const unsubscribe = onValue(roomReference, (snapshot) => {
-      const data = snapshot.val() as RoomData | null;
-      
-      if (!data) {
-        setRoomData(null);
-        setIsConnected(false);
-        setOpponentConnected(false);
-        setConnectionState("disconnected");
-        return;
-      }
-
-      setRoomData(data);
-      setIsConnected(true);
-      setConnectionState("connected");
-
-      // Check opponent connection
-      const userId = auth.currentUser?.uid;
-      if (data.host?.id === userId) {
-        setOpponentConnected(data.guest?.isConnected || false);
-      } else if (data.guest?.id === userId) {
-        setOpponentConnected(data.host?.isConnected || false);
-      }
-    }, (err) => {
-      console.error("[Room Subscription] Error:", err);
-      setError("Failed to sync with room");
-      setIsConnected(false);
-      setConnectionState("disconnected");
-    });
-
-    unsubscribeRef.current = unsubscribe;
-  }, []);
+  }, [getReconnectDelay, showToast, subscribeToRoom]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -737,6 +725,18 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
       console.error("Start new round error:", err);
     }
   }, [roomCode, roomData]);
+
+  // Manual reconnect function
+  const manualReconnect = useCallback(async () => {
+    if (!lastRoomCodeRef.current) {
+      showToast("error", "No room to reconnect to");
+      return;
+    }
+    
+    setReconnectAttempts(0);
+    isReconnectingRef.current = false;
+    await attemptReconnect();
+  }, [attemptReconnect, showToast]);
 
   // Subscribe to an existing room (for reconnection)
   const subscribeToExistingRoom = useCallback((code: string, host: boolean) => {
