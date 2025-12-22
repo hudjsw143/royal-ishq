@@ -99,30 +99,6 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     };
   }, []);
 
-  // Mark player as connected
-  const markConnected = useCallback(async (code: string, host: boolean) => {
-    try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) return;
-
-      const playerPath = host ? "host" : "guest";
-      const playerRef = ref(database, `rooms/${code}/${playerPath}`);
-      
-      await update(playerRef, {
-        isConnected: true,
-        lastSeen: Date.now(),
-      });
-
-      // Set up disconnect handler again
-      const connectedRef = ref(database, `rooms/${code}/${playerPath}/isConnected`);
-      await onDisconnect(connectedRef).set(false);
-      
-      console.log("Reconnected to room:", code);
-    } catch (err) {
-      console.error("Failed to mark connected:", err);
-    }
-  }, []);
-
   // Subscribe to room updates
   const subscribeToRoom = useCallback((code: string) => {
     const roomReference = ref(database, `rooms/${code}`);
@@ -157,54 +133,70 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     unsubscribeRef.current = unsubscribe;
   }, []);
 
+  // Keep track of current room for reconnection
+  useEffect(() => {
+    lastRoomCodeRef.current = roomCode;
+    lastIsHostRef.current = isHost;
+  }, [roomCode, isHost]);
+
   // Monitor Firebase connection state and auto-reconnect
   useEffect(() => {
     const connectedRef = ref(database, ".info/connected");
     
     const unsubscribe = onValue(connectedRef, async (snapshot) => {
       const connected = snapshot.val() === true;
+      const code = lastRoomCodeRef.current;
+      const host = lastIsHostRef.current;
       
-      if (connected && lastRoomCodeRef.current) {
+      if (connected && code) {
         // Connection restored - rejoin room
         console.log("Connection restored, rejoining room...");
         
         // Small delay to ensure Firebase is ready
         reconnectTimeoutRef.current = setTimeout(async () => {
-          const code = lastRoomCodeRef.current;
-          const host = lastIsHostRef.current;
+          if (!lastRoomCodeRef.current) return;
           
-          if (code) {
-            // Check if room still exists
-            try {
-              const roomSnapshot = await get(ref(database, `rooms/${code}`));
-              if (roomSnapshot.exists()) {
-                const data = roomSnapshot.val() as RoomData;
-                const userId = auth.currentUser?.uid;
+          try {
+            const roomSnapshot = await get(ref(database, `rooms/${code}`));
+            if (roomSnapshot.exists()) {
+              const data = roomSnapshot.val() as RoomData;
+              const userId = auth.currentUser?.uid;
+              
+              // Verify we're still part of this room
+              if ((host && data.host?.id === userId) || (!host && data.guest?.id === userId)) {
+                // Mark as connected
+                const playerPath = host ? "host" : "guest";
+                const playerRef = ref(database, `rooms/${code}/${playerPath}`);
                 
-                // Verify we're still part of this room
-                if ((host && data.host?.id === userId) || (!host && data.guest?.id === userId)) {
-                  await markConnected(code, host);
-                  toast.success("Reconnected to game!");
-                } else {
-                  // We're no longer part of this room
-                  lastRoomCodeRef.current = null;
-                  setRoomCode(null);
-                  setRoomData(null);
-                  toast.error("You were removed from the room");
-                }
+                await update(playerRef, {
+                  isConnected: true,
+                  lastSeen: Date.now(),
+                });
+
+                // Set up disconnect handler again
+                const disconnectRef = ref(database, `rooms/${code}/${playerPath}/isConnected`);
+                await onDisconnect(disconnectRef).set(false);
+                
+                toast.success("Reconnected to game!");
               } else {
-                // Room no longer exists
+                // We're no longer part of this room
                 lastRoomCodeRef.current = null;
                 setRoomCode(null);
                 setRoomData(null);
-                toast.error("Room no longer exists");
+                toast.error("You were removed from the room");
               }
-            } catch (err) {
-              console.error("Reconnection check failed:", err);
+            } else {
+              // Room no longer exists
+              lastRoomCodeRef.current = null;
+              setRoomCode(null);
+              setRoomData(null);
+              toast.error("Room no longer exists");
             }
+          } catch (err) {
+            console.error("Reconnection check failed:", err);
           }
         }, 500);
-      } else if (!connected && lastRoomCodeRef.current) {
+      } else if (!connected && code) {
         // Connection lost
         console.log("Connection lost, will attempt to reconnect...");
         setIsConnected(false);
@@ -217,13 +209,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     return () => {
       unsubscribe();
     };
-  }, [markConnected]);
-
-  // Keep track of current room for reconnection
-  useEffect(() => {
-    lastRoomCodeRef.current = roomCode;
-    lastIsHostRef.current = isHost;
-  }, [roomCode, isHost]);
+  }, []);
 
   // Create a new room
   const createRoom = useCallback(async (
