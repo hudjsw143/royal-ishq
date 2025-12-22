@@ -35,6 +35,7 @@ const OnlineGameBoard = ({
     updateScores,
     startNewRound,
     leaveRoom,
+    subscribeToExistingRoom,
   } = useOnlineGame();
 
   const [showCard, setShowCard] = useState(false);
@@ -42,10 +43,10 @@ const OnlineGameBoard = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [disconnectWarning, setDisconnectWarning] = useState(false);
 
-  // Reconnect to room on mount
+  // Subscribe to room on mount
   useEffect(() => {
-    // The hook manages subscription based on roomCode
-  }, [roomCode]);
+    subscribeToExistingRoom(roomCode, isHost);
+  }, [roomCode, isHost, subscribeToExistingRoom]);
 
   // Show disconnect warning
   useEffect(() => {
