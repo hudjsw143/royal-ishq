@@ -56,6 +56,7 @@ interface UseOnlineGameReturn {
   setCurrentCard: (card: GameState["currentCard"]) => Promise<void>;
   updateScores: (winner: "host" | "guest") => Promise<void>;
   startNewRound: () => Promise<void>;
+  subscribeToExistingRoom: (code: string, host: boolean) => void;
 }
 
 const generateRoomCode = (): string => {
@@ -408,6 +409,13 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     }
   }, [roomCode, roomData]);
 
+  // Subscribe to an existing room (for reconnection)
+  const subscribeToExistingRoom = useCallback((code: string, host: boolean) => {
+    setRoomCode(code);
+    setIsHost(host);
+    subscribeToRoom(code);
+  }, [subscribeToRoom]);
+
   return {
     roomCode,
     roomData,
@@ -424,6 +432,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     setCurrentCard,
     updateScores,
     startNewRound,
+    subscribeToExistingRoom,
   };
 };
 
