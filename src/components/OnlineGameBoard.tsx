@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useOnlineGame, RoomData } from "@/hooks/useOnlineGame";
 import OnlineTicTacToeBoard from "./OnlineTicTacToeBoard";
-import { truthDarePrompts, TruthDarePrompt } from "@/data/truthDareContent";
+import { ALL_PROMPTS, TruthDarePrompt } from "@/data/truthDareContent";
 import { toast } from "sonner";
 
 interface PlayerInfo {
@@ -116,8 +116,8 @@ const OnlineGameBoard = ({
       const mood = roomData.mood || "casual";
       const status = roomData.status || "relationship";
       
-      const filteredPrompts = truthDarePrompts.filter(
-        p => p.type === type && p.mood.includes(mood) && p.applicableTo.includes(status)
+      const filteredPrompts = ALL_PROMPTS.filter(
+        p => p.type === type && p.mood === mood && p.status === status
       );
       
       const randomPrompt = filteredPrompts[Math.floor(Math.random() * filteredPrompts.length)];
