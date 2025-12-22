@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useOnlineGame, RoomData } from "@/hooks/useOnlineGame";
 import OnlineTicTacToeBoard from "./OnlineTicTacToeBoard";
+import ChatPanel from "./ChatPanel";
 import { ALL_PROMPTS, TruthDarePrompt } from "@/data/truthDareContent";
 import { toast } from "sonner";
 
@@ -36,6 +37,7 @@ const OnlineGameBoard = ({
     startNewRound,
     leaveRoom,
     subscribeToExistingRoom,
+    sendMessage,
   } = useOnlineGame();
 
   const [showCard, setShowCard] = useState(false);
@@ -537,6 +539,13 @@ const OnlineGameBoard = ({
             </div>
           </div>
         </footer>
+
+        {/* Chat Panel */}
+        <ChatPanel
+          messages={roomData.messages || []}
+          onSendMessage={sendMessage}
+          partnerName={opponentInfo?.name || "Partner"}
+        />
       </div>
     </motion.div>
   );

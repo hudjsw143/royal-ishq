@@ -30,11 +30,21 @@ export interface GameState {
   roundsPlayed: number;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  type: "text" | "emoji";
+  timestamp: number;
+}
+
 export interface RoomData {
   roomCode: string;
   host: OnlinePlayer;
   guest: OnlinePlayer | null;
   gameState: GameState;
+  messages?: ChatMessage[];
   createdAt: number;
   mood: "casual" | "intimate";
   status: "relationship" | "married";
@@ -62,6 +72,7 @@ interface UseOnlineGameReturn {
   startNewRound: () => Promise<void>;
   subscribeToExistingRoom: (code: string, host: boolean) => void;
   manualReconnect: () => Promise<void>;
+  sendMessage: (content: string, type: "text" | "emoji") => Promise<void>;
 }
 
 const generateRoomCode = (): string => {
@@ -745,6 +756,38 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     subscribeToRoom(code);
   }, [subscribeToRoom]);
 
+  // Send chat message
+  const sendMessage = useCallback(async (content: string, type: "text" | "emoji") => {
+    if (!roomCode || !roomData) return;
+    
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    
+    const playerName = isHost ? roomData.host.name : (roomData.guest?.name || "Guest");
+    
+    const newMessage: ChatMessage = {
+      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      senderId: userId,
+      senderName: playerName,
+      content: content.trim(),
+      type,
+      timestamp: Date.now(),
+    };
+    
+    try {
+      // Get current messages and limit to last 49 + new one = 50
+      const currentMessages = roomData.messages || [];
+      const updatedMessages = [...currentMessages, newMessage].slice(-50);
+      
+      await update(ref(database, `rooms/${roomCode}`), {
+        messages: updatedMessages,
+      });
+    } catch (err) {
+      console.error("Send message error:", err);
+      toast.error("Failed to send message");
+    }
+  }, [roomCode, roomData, isHost]);
+
   return {
     roomCode,
     roomData,
@@ -765,6 +808,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     startNewRound,
     subscribeToExistingRoom,
     manualReconnect,
+    sendMessage,
   };
 };
 
