@@ -1,7 +1,18 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { X, Edit3, Music, MessageCircle, Volume2, VolumeX } from "lucide-react";
+import { X, Edit3, Music, MessageCircle, Volume2, VolumeX, LogOut } from "lucide-react";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface UserDetails {
   name: string;
@@ -17,6 +28,7 @@ interface ProfilePanelProps {
   onClose: () => void;
   userDetails: UserDetails;
   onEditProfile: () => void;
+  onLogout?: () => void;
 }
 
 const ProfilePanel = ({
@@ -24,6 +36,7 @@ const ProfilePanel = ({
   onClose,
   userDetails,
   onEditProfile,
+  onLogout,
 }: ProfilePanelProps) => {
   const [isMuted, setIsMuted] = useState(false);
 
@@ -143,13 +156,53 @@ const ProfilePanel = ({
                     <span className="font-medium text-foreground">{item.label}</span>
                   </motion.button>
                 ))}
+
+                {/* Logout Button with Confirmation */}
+                {onLogout && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="mt-4 pt-4 border-t border-border/30"
+                  >
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left transition-colors hover:bg-destructive/10">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+                            <LogOut className="h-5 w-5 text-destructive" />
+                          </div>
+                          <span className="font-medium text-destructive">Logout</span>
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-card border-border">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-foreground">Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-muted-foreground">
+                            You will be logged out of your account. Your game progress will be saved.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="bg-muted text-foreground hover:bg-muted/80">
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={onLogout}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Logout
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </motion.div>
+                )}
               </div>
 
               {/* Audio Controls */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.45 }}
                 className="border-t border-border/50 p-4"
               >
                 <p className="mb-3 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">

@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { Users, Bot, Globe, Sparkles } from "lucide-react";
 import ProfilePanel from "./ProfilePanel";
 import { useState } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 
 interface UserDetails {
   name: string;
@@ -18,10 +18,17 @@ interface LobbyProps {
   userDetails: UserDetails;
   onStartGame: (mode: "offline" | "ai" | "online") => void;
   onEditProfile: () => void;
+  onLogout: () => void;
 }
 
-const Lobby = ({ userDetails, onStartGame, onEditProfile }: LobbyProps) => {
+const Lobby = ({ userDetails, onStartGame, onEditProfile, onLogout }: LobbyProps) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { logout } = useFirebaseAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    onLogout();
+  };
 
   const gameModes = [
     {
@@ -175,6 +182,7 @@ const Lobby = ({ userDetails, onStartGame, onEditProfile }: LobbyProps) => {
         onClose={() => setIsProfileOpen(false)}
         userDetails={userDetails}
         onEditProfile={onEditProfile}
+        onLogout={handleLogout}
       />
     </motion.div>
   );
