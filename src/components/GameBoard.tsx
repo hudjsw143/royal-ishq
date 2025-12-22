@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RotateCcw, Home, MessageCircle, Smile } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, MessageCircle, Smile, SkipForward, Check, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
+import { useTruthDareEngine } from "@/hooks/useTruthDareEngine";
+import { TruthDarePrompt, GameMode, Mood, RelationshipStatus } from "@/data/truthDareContent";
 
 interface PlayerInfo {
   name: string;
@@ -13,6 +15,7 @@ interface PlayerInfo {
 interface GameBoardProps {
   mode: "offline" | "ai" | "online";
   mood?: "casual" | "intimate";
+  relationshipStatus?: "relationship" | "married";
   currentPlayer: PlayerInfo;
   opponent: PlayerInfo;
   onBack: () => void;
@@ -20,7 +23,8 @@ interface GameBoardProps {
 
 const GameBoard = ({
   mode,
-  mood,
+  mood = "casual",
+  relationshipStatus = "relationship",
   currentPlayer,
   opponent,
   onBack,
@@ -28,45 +32,53 @@ const GameBoard = ({
   const [currentTurn, setCurrentTurn] = useState<"player" | "opponent">("player");
   const [showCard, setShowCard] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
-  const [currentCard, setCurrentCard] = useState<{type: "truth" | "dare", content: string} | null>(null);
+  const [currentCard, setCurrentCard] = useState<TruthDarePrompt | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
 
-  const sampleTruths = mood === "intimate" ? [
-    "What's the most romantic thing your partner has ever done for you?",
-    "What moment made you realize you were truly in love?",
-    "What's something you've never told your partner but want to?",
-  ] : [
-    "What's the funniest thing that happened on your first date?",
-    "What's the weirdest thing you find attractive about your partner?",
-    "What's the most embarrassing thing you've done to impress your partner?",
-  ];
+  // Initialize the Truth & Dare engine with game configuration
+  const engine = useTruthDareEngine({
+    mode: mode as GameMode,
+    mood: mood as Mood,
+    status: relationshipStatus as RelationshipStatus,
+  });
 
-  const sampleDares = mood === "intimate" ? [
-    "Give your partner a 30-second romantic compliment without laughing",
-    "Look into your partner's eyes for 60 seconds without speaking",
-    "Write a love note to your partner right now",
-  ] : [
-    "Do your best impression of your partner",
-    "Show the last photo you took of your partner",
-    "Sing your partner's favorite song dramatically",
-  ];
+  // Reset engine when game mode/mood changes
+  useEffect(() => {
+    engine.resetEngine();
+  }, [mode, mood, relationshipStatus]);
 
   const handleSpinWheel = () => {
-    const isTruth = Math.random() > 0.5;
-    const contents = isTruth ? sampleTruths : sampleDares;
-    const randomContent = contents[Math.floor(Math.random() * contents.length)];
+    setIsSpinning(true);
     
-    setCurrentCard({
-      type: isTruth ? "truth" : "dare",
-      content: randomContent,
-    });
-    setShowCard(true);
-    setCardRevealed(false);
+    // Simulate spinning animation delay
+    setTimeout(() => {
+      // Randomly choose between truth and dare
+      const isTruth = Math.random() > 0.5;
+      const prompt = engine.getPrompt(isTruth ? "truth" : "dare");
+      
+      if (prompt) {
+        setCurrentCard(prompt);
+        setShowCard(true);
+        setCardRevealed(false);
+      }
+      setIsSpinning(false);
+    }, 800);
   };
 
   const handleCardTap = () => {
     if (!cardRevealed) {
       setCardRevealed(true);
     }
+  };
+
+  const handleComplete = () => {
+    engine.onPromptCompleted();
+    handleNextTurn();
+  };
+
+  const handleSkip = () => {
+    engine.onPromptSkipped();
+    handleNextTurn();
   };
 
   const handleNextTurn = () => {
@@ -128,6 +140,14 @@ const GameBoard = ({
           </div>
         </header>
 
+        {/* Intensity Indicator */}
+        <div className="absolute top-16 left-1/2 -translate-x-1/2">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-card/50 backdrop-blur-sm border border-border/30">
+            <Sparkles className="h-3 w-3 text-secondary" />
+            <span className="text-xs text-muted-foreground">{engine.getIntensityLabel()}</span>
+          </div>
+        </div>
+
         {/* Game Area */}
         <main className="flex flex-1 flex-col items-center justify-center px-4">
           {!showCard ? (
@@ -145,17 +165,27 @@ const GameBoard = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSpinWheel}
-                className="relative h-40 w-40 rounded-full bg-gradient-to-br from-primary via-secondary to-primary shadow-2xl"
+                disabled={isSpinning}
+                className="relative h-40 w-40 rounded-full bg-gradient-to-br from-primary via-secondary to-primary shadow-2xl disabled:opacity-70"
               >
-                <div className="absolute inset-2 flex items-center justify-center rounded-full bg-card">
+                <motion.div 
+                  className="absolute inset-2 flex items-center justify-center rounded-full bg-card"
+                  animate={isSpinning ? { rotate: 360 } : { rotate: 0 }}
+                  transition={isSpinning ? { duration: 0.8, repeat: Infinity, ease: "linear" } : {}}
+                >
                   <span className="font-display text-xl font-bold text-foreground">
-                    SPIN
+                    {isSpinning ? "..." : "SPIN"}
                   </span>
-                </div>
+                </motion.div>
               </motion.button>
 
               <p className="mt-6 text-sm text-muted-foreground">
                 Tap to reveal your fate
+              </p>
+              
+              {/* Rounds Played Counter */}
+              <p className="mt-2 text-xs text-muted-foreground/60">
+                Round {engine.roundsPlayed + 1}
               </p>
             </motion.div>
           ) : (
@@ -166,7 +196,7 @@ const GameBoard = ({
               onClick={handleCardTap}
               className="perspective-1000 cursor-pointer"
             >
-              <div className="glass-card relative h-80 w-64 overflow-hidden rounded-3xl p-6 shadow-2xl">
+              <div className="glass-card relative h-96 w-72 overflow-hidden rounded-3xl p-6 shadow-2xl">
                 {!cardRevealed ? (
                   <div className="flex h-full flex-col items-center justify-center">
                     <div className="text-6xl mb-4">🎴</div>
@@ -184,28 +214,57 @@ const GameBoard = ({
                         ? "bg-secondary/20 text-secondary" 
                         : "bg-primary/20 text-primary"
                     }`}>
-                      {currentCard?.type === "truth" ? "TRUTH" : "DARE"}
+                      {currentCard?.type === "truth" ? "💭 TRUTH" : "🔥 DARE"}
+                    </div>
+
+                    {/* Intensity Level Dots */}
+                    <div className="flex justify-center gap-1 mb-3">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <div
+                          key={level}
+                          className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                            level <= (currentCard?.intensity || 1)
+                              ? "bg-secondary"
+                              : "bg-border/30"
+                          }`}
+                        />
+                      ))}
                     </div>
 
                     {/* Card Content */}
-                    <div className="flex flex-1 items-center justify-center text-center">
+                    <div className="flex flex-1 items-center justify-center text-center px-2">
                       <p className="font-display text-lg text-foreground leading-relaxed">
                         {currentCard?.content}
                       </p>
                     </div>
 
-                    {/* Complete Button */}
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      className="mt-4 w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNextTurn();
-                      }}
-                    >
-                      Complete & Next Turn
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        variant="glass"
+                        size="sm"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSkip();
+                        }}
+                      >
+                        <SkipForward className="h-4 w-4 mr-1" />
+                        Skip
+                      </Button>
+                      <Button
+                        variant="gold"
+                        size="sm"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleComplete();
+                        }}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Done
+                      </Button>
+                    </div>
                   </motion.div>
                 )}
               </div>
