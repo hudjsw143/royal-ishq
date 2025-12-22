@@ -105,10 +105,32 @@ const GameBoard = ({
     
     setTimeout(() => {
       const isTruth = Math.random() > 0.5;
-      const prompt = engine.getPrompt(isTruth ? "truth" : "dare");
+      let prompt = engine.getPrompt(isTruth ? "truth" : "dare");
+      
+      // If no prompt found, try the other type
+      if (!prompt) {
+        prompt = engine.getPrompt(isTruth ? "dare" : "truth");
+      }
       
       if (prompt) {
         setCurrentCard(prompt);
+        setShowCard(true);
+        setCardRevealed(false);
+      } else {
+        // Fallback: create a default prompt if none found
+        const fallbackPrompt: TruthDarePrompt = {
+          id: 'fallback_1',
+          type: isTruth ? 'truth' : 'dare',
+          content: isTruth 
+            ? "Share your favorite memory with your partner."
+            : "Give your partner a heartfelt compliment.",
+          mode: mode as GameMode,
+          mood: mood as Mood,
+          status: relationshipStatus as RelationshipStatus,
+          intensity: 2,
+          category: 'fallback',
+        };
+        setCurrentCard(fallbackPrompt);
         setShowCard(true);
         setCardRevealed(false);
       }

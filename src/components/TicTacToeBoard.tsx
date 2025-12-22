@@ -210,7 +210,7 @@ const TicTacToeBoard = ({
       </motion.div>
 
       {/* Board */}
-      <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/30">
+      <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-primary/10 backdrop-blur-sm border-2 border-secondary/40 shadow-lg">
         {board.map((cell, index) => (
           <motion.button
             key={index}
