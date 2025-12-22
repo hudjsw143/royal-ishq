@@ -23,7 +23,7 @@ const OnlineTicTacToeBoard = ({
 }: OnlineTicTacToeBoardProps) => {
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
   
-  const board = roomData?.gameState?.board || Array(9).fill(null);
+  const board = roomData?.gameState?.board || Array(9).fill("");
   const currentTurn = roomData?.gameState?.currentTurn || "host";
   const isMyTurn = (isHost && currentTurn === "host") || (!isHost && currentTurn === "guest");
   const mySymbol = isHost ? "👑" : "❤️";
@@ -33,7 +33,7 @@ const OnlineTicTacToeBoard = ({
   useEffect(() => {
     for (const combination of WINNING_COMBINATIONS) {
       const [a, b, c] = combination;
-      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      if (board[a] !== "" && board[a] === board[b] && board[a] === board[c]) {
         setWinningLine(combination);
         return;
       }
@@ -42,7 +42,7 @@ const OnlineTicTacToeBoard = ({
   }, [board]);
 
   const handleClick = (index: number) => {
-    if (board[index] || !isMyTurn || disabled || roomData.gameState.winner) return;
+    if (board[index] !== "" || !isMyTurn || disabled || roomData?.gameState?.winner) return;
     onMove(index);
   };
 
@@ -79,9 +79,9 @@ const OnlineTicTacToeBoard = ({
           <motion.button
             key={index}
             onClick={() => handleClick(index)}
-            disabled={!!cell || !isMyTurn || disabled}
-            whileHover={!cell && isMyTurn && !disabled ? { scale: 1.05 } : {}}
-            whileTap={!cell && isMyTurn && !disabled ? { scale: 0.95 } : {}}
+            disabled={cell !== "" || !isMyTurn || disabled}
+            whileHover={cell === "" && isMyTurn && !disabled ? { scale: 1.05 } : {}}
+            whileTap={cell === "" && isMyTurn && !disabled ? { scale: 0.95 } : {}}
             className={`
               h-20 w-20 sm:h-24 sm:w-24 rounded-xl text-4xl sm:text-5xl
               flex items-center justify-center
@@ -91,11 +91,11 @@ const OnlineTicTacToeBoard = ({
                 : "bg-card/80 border-border/50 hover:border-secondary/50"
               }
               border-2
-              ${!cell && isMyTurn && !disabled ? "cursor-pointer hover:bg-muted/50" : "cursor-default"}
+              ${cell === "" && isMyTurn && !disabled ? "cursor-pointer hover:bg-muted/50" : "cursor-default"}
               disabled:opacity-100
             `}
           >
-            {cell && (
+            {cell !== "" && (
               <motion.span
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}

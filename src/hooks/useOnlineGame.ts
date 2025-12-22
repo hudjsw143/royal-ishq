@@ -13,7 +13,7 @@ export interface OnlinePlayer {
 }
 
 export interface GameState {
-  board: (string | null)[];
+  board: string[];
   currentTurn: "host" | "guest";
   winner: "host" | "guest" | "draw" | null;
   gamePhase: "waiting" | "tic-tac-toe" | "reveal-loser" | "truth-dare" | "round-complete";
@@ -150,7 +150,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
       }
 
       const initialGameState: GameState = {
-        board: Array(9).fill(null),
+        board: Array(9).fill(""),
         currentTurn: "host",
         winner: null,
         gamePhase: "waiting",
@@ -328,7 +328,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
           loser: gameLoser,
           gamePhase: "reveal-loser",
         };
-      } else if (newBoard.every(cell => cell !== null)) {
+      } else if (newBoard.every(cell => cell !== "")) {
         // Draw - random loser
         const randomLoser = Math.random() > 0.5 ? "host" : "guest";
         updates = {
@@ -397,7 +397,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
       const nextStarter = roomData.gameState.roundsPlayed % 2 === 0 ? "guest" : "host";
       
       await update(ref(database, `rooms/${roomCode}/gameState`), {
-        board: Array(9).fill(null),
+        board: Array(9).fill(""),
         currentTurn: nextStarter,
         winner: null,
         gamePhase: "tic-tac-toe",
@@ -443,7 +443,7 @@ const WINNING_COMBINATIONS = [
   [0, 4, 8], [2, 4, 6],
 ];
 
-function checkWinner(board: (string | null)[]): { winner: string | null; line: number[] | null } {
+function checkWinner(board: string[]): { winner: string | null; line: number[] | null } {
   for (const combination of WINNING_COMBINATIONS) {
     const [a, b, c] = combination;
     if (board[a] && board[a] === board[b] && board[a] === board[c]) {
