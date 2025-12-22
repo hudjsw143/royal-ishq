@@ -18,10 +18,9 @@ interface LobbyProps {
   userDetails: UserDetails;
   onStartGame: (mode: "offline" | "ai" | "online") => void;
   onEditProfile: () => void;
-  onLogout: () => void;
 }
 
-const Lobby = ({ userDetails, onStartGame, onEditProfile, onLogout }: LobbyProps) => {
+const Lobby = ({ userDetails, onStartGame, onEditProfile }: LobbyProps) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const gameModes = [
@@ -176,7 +175,6 @@ const Lobby = ({ userDetails, onStartGame, onEditProfile, onLogout }: LobbyProps
         onClose={() => setIsProfileOpen(false)}
         userDetails={userDetails}
         onEditProfile={onEditProfile}
-        onLogout={onLogout}
       />
     </motion.div>
   );
