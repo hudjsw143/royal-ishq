@@ -6,6 +6,7 @@ import { getStorage } from "firebase/storage";
 const firebaseConfig = {
   apiKey: "AIzaSyCSC6_6VJxsOWOZ6LuXcBjFFmpA7-RD6og",
   authDomain: "royal-ishq.firebaseapp.com",
+  databaseURL: "https://royal-ishq-default-rtdb.firebaseio.com",
   projectId: "royal-ishq",
   storageBucket: "royal-ishq.firebasestorage.app",
   messagingSenderId: "178909054252",
