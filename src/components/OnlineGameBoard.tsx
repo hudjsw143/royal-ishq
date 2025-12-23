@@ -8,7 +8,6 @@ import OnlineTicTacToeBoard from "./OnlineTicTacToeBoard";
 import ChatPanel from "./ChatPanel";
 import { ALL_PROMPTS, TruthDarePrompt } from "@/data/truthDareContent";
 import { toast } from "sonner";
-import AudioControls from "./AudioControls";
 
 interface PlayerInfo {
   name: string;
@@ -227,17 +226,14 @@ const OnlineGameBoard = ({
       <div className="relative z-10 flex h-full flex-col">
         {/* Header */}
         <header className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <AudioControls compact />
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
 
           {/* Score Display */}
           <div className="flex items-center gap-4 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border/30">
