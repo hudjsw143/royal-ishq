@@ -1,11 +1,14 @@
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { GAME_SOUNDS, SoundType } from "@/data/gameSounds";
 
 const SFX_VOLUME = 0.8; // 80% volume for sound effects
+const SFX_MUTE_KEY = "sfx_muted";
 
 export const useSoundEffects = () => {
   const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map());
-  const isEnabledRef = useRef(true);
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem(SFX_MUTE_KEY) === "true";
+  });
 
   // Preload common sounds
   useEffect(() => {
@@ -23,7 +26,7 @@ export const useSoundEffects = () => {
   }, []);
 
   const playSound = useCallback((soundName: SoundType) => {
-    if (!isEnabledRef.current) return;
+    if (isMuted) return;
 
     const url = GAME_SOUNDS[soundName];
     if (!url) return;
@@ -47,19 +50,26 @@ export const useSoundEffects = () => {
     } catch (err) {
       console.error("Error playing sound:", err);
     }
+  }, [isMuted]);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted(prev => {
+      const newValue = !prev;
+      localStorage.setItem(SFX_MUTE_KEY, String(newValue));
+      return newValue;
+    });
   }, []);
 
-  const setEnabled = useCallback((enabled: boolean) => {
-    isEnabledRef.current = enabled;
-  }, []);
-
-  return { playSound, setEnabled };
+  return { playSound, isMuted, toggleMute };
 };
 
-// Singleton instance for components that don't use hooks
+// Singleton for global access
+let globalMuted = localStorage.getItem(SFX_MUTE_KEY) === "true";
 let globalAudioCache: Map<string, HTMLAudioElement> | null = null;
 
 export const playSoundEffect = (soundName: SoundType) => {
+  if (globalMuted) return;
+  
   const url = GAME_SOUNDS[soundName];
   if (!url) return;
 
@@ -83,4 +93,8 @@ export const playSoundEffect = (soundName: SoundType) => {
   } catch (err) {
     console.error("Error playing sound:", err);
   }
+};
+
+export const setGlobalSfxMuted = (muted: boolean) => {
+  globalMuted = muted;
 };
