@@ -9,11 +9,14 @@ interface AudioContextType {
   pause: () => void;
   togglePlay: () => void;
   setDefaultTrack: (trackId: string | null) => void;
+  pauseForVoice: () => void;
+  resumeAfterVoice: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | null>(null);
 
 const FADE_DURATION = 500; // ms
+const BG_MUSIC_VOLUME = 0.35; // 35% volume for background music
 const STORAGE_KEY_DEFAULT = "audio_default_track";
 const STORAGE_KEY_VISITED = "audio_has_visited";
 
@@ -36,19 +39,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Fade in effect
-  const fadeIn = useCallback((audio: HTMLAudioElement, onComplete?: () => void) => {
+  // Fade in effect - fade to BG_MUSIC_VOLUME (35%)
+  const fadeIn = useCallback((audio: HTMLAudioElement, onComplete?: () => void, targetVolume = BG_MUSIC_VOLUME) => {
     clearFadeInterval();
     audio.volume = 0;
     
     const steps = 20;
     const stepDuration = FADE_DURATION / steps;
-    const volumeStep = 1 / steps;
+    const volumeStep = targetVolume / steps;
     let currentStep = 0;
 
     fadeIntervalRef.current = window.setInterval(() => {
       currentStep++;
-      audio.volume = Math.min(currentStep * volumeStep, 1);
+      audio.volume = Math.min(currentStep * volumeStep, targetVolume);
       
       if (currentStep >= steps) {
         clearFadeInterval();
@@ -98,7 +101,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (withFadeIn) {
             fadeIn(audioRef.current!);
           } else {
-            audioRef.current!.volume = 1;
+            audioRef.current!.volume = BG_MUSIC_VOLUME;
           }
         })
         .catch(err => {
@@ -229,6 +232,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  // Pause background music for voice note playback
+  const pauseForVoice = useCallback(() => {
+    if (audioRef.current && isPlaying) {
+      fadeOut(audioRef.current, () => {
+        audioRef.current?.pause();
+        // Don't set isPlaying to false - we want to resume after
+      });
+    }
+  }, [isPlaying, fadeOut]);
+
+  // Resume background music after voice note
+  const resumeAfterVoice = useCallback(() => {
+    if (audioRef.current && currentTrack) {
+      audioRef.current.play()
+        .then(() => {
+          fadeIn(audioRef.current!);
+        })
+        .catch(console.error);
+    }
+  }, [currentTrack, fadeIn]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -250,6 +274,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         pause,
         togglePlay,
         setDefaultTrack,
+        pauseForVoice,
+        resumeAfterVoice,
       }}
     >
       {children}
