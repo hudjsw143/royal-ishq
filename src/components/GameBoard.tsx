@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MessageCircle, Smile, Sparkles, Trophy, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, MessageCircle, Smile, Sparkles, Trophy, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useTruthDareEngine } from "@/hooks/useTruthDareEngine";
@@ -31,7 +31,7 @@ const GameBoard = ({
   onBack
 }: GameBoardProps) => {
   // Sound effects
-  const { isMuted, toggleMute } = useSoundEffects();
+  const { playSound } = useSoundEffects();
 
   // Game phase management
   const [gamePhase, setGamePhase] = useState<GamePhase>("tic-tac-toe");
@@ -64,6 +64,7 @@ const GameBoard = ({
 
   // Handle Tic Tac Toe move
   const handleTicTacToeMove = () => {
+    playSound("move");
     // Toggle turn after each move
     setTicTacToeTurn(prev => prev === "player" ? "opponent" : "player");
   };
@@ -72,18 +73,21 @@ const GameBoard = ({
   const handleTicTacToeEnd = (winner: "player" | "opponent" | "draw") => {
     setGameWinner(winner);
     if (winner === "draw") {
+      playSound("lose"); // Use lose sound for draw
       // On draw, randomly pick who gets the challenge
       const randomLoser = Math.random() > 0.5 ? "player" : "opponent";
       setLoser(randomLoser);
     } else {
       // Winner gets a point, loser gets the challenge
       if (winner === "player") {
+        playSound("win");
         setScores(prev => ({
           ...prev,
           player: prev.player + 1
         }));
         setLoser("opponent");
       } else {
+        playSound("lose");
         setScores(prev => ({
           ...prev,
           opponent: prev.opponent + 1
@@ -101,6 +105,7 @@ const GameBoard = ({
 
   // Handle proceeding to Truth/Dare
   const handleProceedToChallenge = () => {
+    playSound("buttonClick");
     setGamePhase("truth-dare");
     setShowCard(false);
     setCardRevealed(false);
@@ -109,6 +114,7 @@ const GameBoard = ({
 
   // Handle spin wheel for Truth/Dare
   const handleSpinWheel = () => {
+    playSound("wheelSpin");
     setIsSpinning(true);
     setTimeout(() => {
       const isTruth = Math.random() > 0.5;
@@ -138,25 +144,30 @@ const GameBoard = ({
         setShowCard(true);
         setCardRevealed(false);
       }
+      playSound("cardFlip");
       setIsSpinning(false);
     }, 800);
   };
   const handleCardTap = () => {
     if (!cardRevealed) {
+      playSound("cardFlip");
       setCardRevealed(true);
     }
   };
   const handleComplete = () => {
+    playSound("buttonClick");
     engine.onPromptCompleted();
     setGamePhase("round-complete");
   };
   const handleSkip = () => {
+    playSound("buttonClick");
     engine.onPromptSkipped();
     setGamePhase("round-complete");
   };
 
   // Start new round
   const handleNewRound = () => {
+    playSound("gameStart");
     setGamePhase("tic-tac-toe");
     setGameWinner(null);
     setLoser(null);
@@ -197,20 +208,9 @@ const GameBoard = ({
       <div className="relative z-10 flex h-full flex-col">
         {/* Header */}
         <header className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleMute} 
-              className={`text-muted-foreground hover:text-foreground ${isMuted ? 'text-destructive' : ''}`}
-              title={isMuted ? "Unmute SFX" : "Mute SFX"}
-            >
-              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </Button>
-          </div>
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
 
           {/* Score Display */}
           <div className="flex items-center gap-4 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border/30">
