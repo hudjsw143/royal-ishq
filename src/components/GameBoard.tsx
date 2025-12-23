@@ -63,6 +63,14 @@ const GameBoard = ({
   // Key to force TicTacToeBoard remount
   const [boardKey, setBoardKey] = useState(0);
 
+  // Initialize the Truth & Dare engine with game configuration
+  // IMPORTANT: This hook must be called before any conditional useEffects
+  const engine = useTruthDareEngine({
+    mode: mode as GameMode,
+    mood: mood as Mood,
+    status: relationshipStatus as RelationshipStatus
+  });
+
   // Load saved scores on mount (for AI and offline modes)
   useEffect(() => {
     if (mode === "online") return;
@@ -89,13 +97,6 @@ const GameBoard = ({
     const storageKey = mode === "ai" ? AI_SCORES_KEY : OFFLINE_SCORES_KEY;
     localStorage.setItem(storageKey, JSON.stringify({ scores, roundsPlayed }));
   }, [scores, roundsPlayed, mode]);
-
-  // Initialize the Truth & Dare engine with game configuration
-  const engine = useTruthDareEngine({
-    mode: mode as GameMode,
-    mood: mood as Mood,
-    status: relationshipStatus as RelationshipStatus
-  });
 
   // Handle Tic Tac Toe move
   const handleTicTacToeMove = () => {
