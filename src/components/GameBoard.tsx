@@ -57,10 +57,8 @@ const GameBoard = ({
   const [roundsPlayed, setRoundsPlayed] = useState(0);
 
   // Truth/Dare state
-  const [showCard, setShowCard] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
   const [currentCard, setCurrentCard] = useState<TruthDarePrompt | null>(null);
-  const [isSpinning, setIsSpinning] = useState(false);
 
   // Key to force TicTacToeBoard remount
   const [boardKey, setBoardKey] = useState(0);
@@ -140,50 +138,36 @@ const GameBoard = ({
     }, 1000);
   };
 
-  // Handle proceeding to Truth/Dare
+  // Handle proceeding to Truth/Dare - directly generate card
   const handleProceedToChallenge = () => {
     playSound("buttonClick");
     setGamePhase("truth-dare");
-    setShowCard(false);
     setCardRevealed(false);
-    setCurrentCard(null);
-  };
+    
+    // Generate card immediately
+    const isTruth = Math.random() > 0.5;
+    let prompt = engine.getPrompt(isTruth ? "truth" : "dare");
 
-  // Handle spin wheel for Truth/Dare
-  const handleSpinWheel = () => {
-    playSound("wheelSpin");
-    setIsSpinning(true);
-    setTimeout(() => {
-      const isTruth = Math.random() > 0.5;
-      let prompt = engine.getPrompt(isTruth ? "truth" : "dare");
-
-      // If no prompt found, try the other type
-      if (!prompt) {
-        prompt = engine.getPrompt(isTruth ? "dare" : "truth");
-      }
-      if (prompt) {
-        setCurrentCard(prompt);
-        setShowCard(true);
-        setCardRevealed(false);
-      } else {
-        // Fallback: create a default prompt if none found
-        const fallbackPrompt: TruthDarePrompt = {
-          id: 'fallback_1',
-          type: isTruth ? 'truth' : 'dare',
-          content: isTruth ? "Share your favorite memory with your partner." : "Give your partner a heartfelt compliment.",
-          mode: mode as GameMode,
-          mood: mood as Mood,
-          status: relationshipStatus as RelationshipStatus,
-          intensity: 2,
-          category: 'fallback'
-        };
-        setCurrentCard(fallbackPrompt);
-        setShowCard(true);
-        setCardRevealed(false);
-      }
-      playSound("cardFlip");
-      setIsSpinning(false);
-    }, 800);
+    // If no prompt found, try the other type
+    if (!prompt) {
+      prompt = engine.getPrompt(isTruth ? "dare" : "truth");
+    }
+    if (prompt) {
+      setCurrentCard(prompt);
+    } else {
+      // Fallback: create a default prompt if none found
+      const fallbackPrompt: TruthDarePrompt = {
+        id: 'fallback_1',
+        type: isTruth ? 'truth' : 'dare',
+        content: isTruth ? "Share your favorite memory with your partner." : "Give your partner a heartfelt compliment.",
+        mode: mode as GameMode,
+        mood: mood as Mood,
+        status: relationshipStatus as RelationshipStatus,
+        intensity: 2,
+        category: 'fallback'
+      };
+      setCurrentCard(fallbackPrompt);
+    }
   };
   const handleCardTap = () => {
     if (!cardRevealed) {
@@ -208,7 +192,6 @@ const GameBoard = ({
     setGamePhase("tic-tac-toe");
     setGameWinner(null);
     setLoser(null);
-    setShowCard(false);
     setCurrentCard(null);
     setCardRevealed(false);
     // Alternate who starts
@@ -371,41 +354,17 @@ const GameBoard = ({
             opacity: 0,
             scale: 0.9
           }} className="text-center">
-                <p className="mb-2 text-muted-foreground">
+                <p className="mb-4 text-muted-foreground">
                   Challenge for <span className="text-secondary font-medium">{getLoserName()}</span>
                 </p>
 
-                {!showCard ? <div className="flex flex-col items-center">
-                    {/* Spin Button */}
-                    <motion.button whileHover={{
-                scale: 1.05
-              }} whileTap={{
-                scale: 0.95
-              }} onClick={handleSpinWheel} disabled={isSpinning} className="relative h-40 w-40 rounded-full bg-gradient-to-br from-primary via-secondary to-primary shadow-2xl disabled:opacity-70">
-                      <motion.div className="absolute inset-2 flex items-center justify-center rounded-full bg-card" animate={isSpinning ? {
-                  rotate: 360
-                } : {
-                  rotate: 0
-                }} transition={isSpinning ? {
-                  duration: 0.8,
-                  repeat: Infinity,
-                  ease: "linear"
-                } : {}}>
-                        <span className="font-display text-xl font-bold text-foreground">
-                          {isSpinning ? "..." : "SPIN"}
-                        </span>
-                      </motion.div>
-                    </motion.button>
-                    <p className="mt-6 text-sm text-muted-foreground">
-                      Tap to reveal {getLoserName()}'s fate
-                    </p>
-                  </div> : <TruthDareCard
-                    card={currentCard}
-                    isRevealed={cardRevealed}
-                    onTap={handleCardTap}
-                    onComplete={handleComplete}
-                    onSkip={handleSkip}
-                  />}
+                <TruthDareCard
+                  card={currentCard}
+                  isRevealed={cardRevealed}
+                  onTap={handleCardTap}
+                  onComplete={handleComplete}
+                  onSkip={handleSkip}
+                />
               </motion.div>}
 
             {/* Phase 4: Round Complete */}

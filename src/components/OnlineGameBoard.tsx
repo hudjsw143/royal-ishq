@@ -48,9 +48,7 @@ const OnlineGameBoard = ({
   const { saveGameHistory } = useFirebaseProfile();
   const { user } = useFirebaseAuth();
 
-  const [showCard, setShowCard] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false);
   const [disconnectWarning, setDisconnectWarning] = useState(false);
   const wasConnectedRef = useRef(false);
 
@@ -156,40 +154,33 @@ const OnlineGameBoard = ({
     if (winner && winner !== "draw") {
       await updateScores(winner);
     }
-    await updateGamePhase("truth-dare");
-  };
-
-  const handleSpinWheel = async () => {
-    playSound("wheelSpin");
-    setIsSpinning(true);
     
-    setTimeout(async () => {
-      const isTruth = Math.random() > 0.5;
-      const type = isTruth ? "truth" : "dare";
-      
-      // Get random prompt
-      const mood = roomData.mood || "casual";
-      const status = roomData.status || "relationship";
-      
-      // Filter for ONLINE mode prompts only (distance-friendly)
-      const filteredPrompts = ALL_PROMPTS.filter(
-        p => p.type === type && p.mode === "online" && p.mood === mood && p.status === status
-      );
-      
-      const randomPrompt = filteredPrompts[Math.floor(Math.random() * filteredPrompts.length)];
-      
-      if (randomPrompt) {
-        await setCurrentCard({
-          type: randomPrompt.type,
-          content: randomPrompt.content,
-          intensity: randomPrompt.intensity,
-        });
-        playSound("cardFlip");
-        setShowCard(true);
-        setCardRevealed(false);
-      }
-      setIsSpinning(false);
-    }, 800);
+    // Generate card immediately
+    const isTruth = Math.random() > 0.5;
+    const type = isTruth ? "truth" : "dare";
+    
+    // Get random prompt
+    const mood = roomData.mood || "casual";
+    const status = roomData.status || "relationship";
+    
+    // Filter for ONLINE mode prompts only (distance-friendly)
+    const filteredPrompts = ALL_PROMPTS.filter(
+      p => p.type === type && p.mode === "online" && p.mood === mood && p.status === status
+    );
+    
+    const randomPrompt = filteredPrompts[Math.floor(Math.random() * filteredPrompts.length)];
+    
+    if (randomPrompt) {
+      await setCurrentCard({
+        type: randomPrompt.type,
+        content: randomPrompt.content,
+        intensity: randomPrompt.intensity,
+      });
+      playSound("cardFlip");
+      setCardRevealed(false);
+    }
+    
+    await updateGamePhase("truth-dare");
   };
 
   const handleCardTap = () => {
@@ -202,14 +193,12 @@ const OnlineGameBoard = ({
   const handleComplete = async () => {
     playSound("buttonClick");
     await updateGamePhase("round-complete");
-    setShowCard(false);
     setCardRevealed(false);
   };
 
   const handleSkip = async () => {
     playSound("buttonClick");
     await updateGamePhase("round-complete");
-    setShowCard(false);
     setCardRevealed(false);
   };
 
@@ -220,7 +209,6 @@ const OnlineGameBoard = ({
   const handleNewRound = async () => {
     playSound("gameStart");
     await startNewRound();
-    setShowCard(false);
     setCardRevealed(false);
   };
 
@@ -423,130 +411,93 @@ const OnlineGameBoard = ({
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="text-center"
               >
-                <p className="mb-2 text-muted-foreground">
+                <p className="mb-4 text-muted-foreground">
                   Challenge for <span className="text-secondary font-medium">{getLoserName()}</span>
                   {amILoser() && <span className="text-primary ml-1">(You!)</span>}
                 </p>
 
-                {!showCard && !roomData.gameState.currentCard ? (
-                  <div className="flex flex-col items-center">
-                    {/* Only the loser can spin */}
-                    {amILoser() ? (
-                      <>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleSpinWheel}
-                          disabled={isSpinning}
-                          className="relative h-40 w-40 rounded-full bg-gradient-to-br from-primary via-secondary to-primary shadow-2xl disabled:opacity-70"
-                        >
-                          <motion.div 
-                            className="absolute inset-2 flex items-center justify-center rounded-full bg-card"
-                            animate={isSpinning ? { rotate: 360 } : { rotate: 0 }}
-                            transition={isSpinning ? { duration: 0.8, repeat: Infinity, ease: "linear" } : {}}
-                          >
-                            <span className="font-display text-xl font-bold text-foreground">
-                              {isSpinning ? "..." : "SPIN"}
-                            </span>
-                          </motion.div>
-                        </motion.button>
-                        <p className="mt-6 text-sm text-muted-foreground">
-                          Tap to reveal your fate
-                        </p>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <div className="text-6xl mb-4 animate-pulse">⏳</div>
-                        <p className="text-muted-foreground">
-                          Waiting for {getLoserName()} to spin...
-                        </p>
+                <motion.div
+                  initial={{ rotateY: 180, opacity: 0 }}
+                  animate={{ rotateY: cardRevealed || roomData.gameState.currentCard ? 0 : 180, opacity: 1 }}
+                  transition={{ duration: 0.6 }}
+                  onClick={handleCardTap}
+                  className="perspective-1000 cursor-pointer"
+                >
+                  <div className="glass-card relative h-96 w-72 overflow-hidden rounded-3xl p-6 shadow-2xl">
+                    {!cardRevealed && !roomData.gameState.currentCard ? (
+                      <div className="flex h-full flex-col items-center justify-center">
+                        <div className="text-6xl mb-4">🎴</div>
+                        <p className="text-muted-foreground">Tap to reveal</p>
                       </div>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex h-full flex-col"
+                      >
+                        {/* Card Type Badge */}
+                        <div className={`mx-auto mb-4 rounded-full px-4 py-1 text-sm font-semibold ${
+                          roomData.gameState.currentCard?.type === "truth" 
+                            ? "bg-secondary/20 text-secondary" 
+                            : "bg-primary/20 text-primary"
+                        }`}>
+                          {roomData.gameState.currentCard?.type === "truth" ? "💭 TRUTH" : "🔥 DARE"}
+                        </div>
+
+                        {/* Intensity Level Dots */}
+                        <div className="flex justify-center gap-1 mb-3">
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <div
+                              key={level}
+                              className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                                level <= (roomData.gameState.currentCard?.intensity || 1)
+                                  ? "bg-secondary"
+                                  : "bg-border/30"
+                              }`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Card Content */}
+                        <div className="flex flex-1 items-center justify-center text-center px-2">
+                          <p className="font-display text-lg text-foreground leading-relaxed">
+                            {roomData.gameState.currentCard?.content}
+                          </p>
+                        </div>
+
+                        {/* Action Buttons - Only loser can complete/skip */}
+                        {amILoser() && (
+                          <div className="flex gap-2 mt-4">
+                            <Button
+                              variant="glass"
+                              size="sm"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSkip();
+                              }}
+                            >
+                              <SkipForward className="h-4 w-4 mr-1" />
+                              Skip
+                            </Button>
+                            <Button
+                              variant="gold"
+                              size="sm"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleComplete();
+                              }}
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Done
+                            </Button>
+                          </div>
+                        )}
+                      </motion.div>
                     )}
                   </div>
-                ) : (
-                  <motion.div
-                    initial={{ rotateY: 180, opacity: 0 }}
-                    animate={{ rotateY: cardRevealed || roomData.gameState.currentCard ? 0 : 180, opacity: 1 }}
-                    transition={{ duration: 0.6 }}
-                    onClick={handleCardTap}
-                    className="perspective-1000 cursor-pointer"
-                  >
-                    <div className="glass-card relative h-96 w-72 overflow-hidden rounded-3xl p-6 shadow-2xl">
-                      {!cardRevealed && !roomData.gameState.currentCard ? (
-                        <div className="flex h-full flex-col items-center justify-center">
-                          <div className="text-6xl mb-4">🎴</div>
-                          <p className="text-muted-foreground">Tap to reveal</p>
-                        </div>
-                      ) : (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="flex h-full flex-col"
-                        >
-                          {/* Card Type Badge */}
-                          <div className={`mx-auto mb-4 rounded-full px-4 py-1 text-sm font-semibold ${
-                            roomData.gameState.currentCard?.type === "truth" 
-                              ? "bg-secondary/20 text-secondary" 
-                              : "bg-primary/20 text-primary"
-                          }`}>
-                            {roomData.gameState.currentCard?.type === "truth" ? "💭 TRUTH" : "🔥 DARE"}
-                          </div>
-
-                          {/* Intensity Level Dots */}
-                          <div className="flex justify-center gap-1 mb-3">
-                            {[1, 2, 3, 4, 5].map((level) => (
-                              <div
-                                key={level}
-                                className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                                  level <= (roomData.gameState.currentCard?.intensity || 1)
-                                    ? "bg-secondary"
-                                    : "bg-border/30"
-                                }`}
-                              />
-                            ))}
-                          </div>
-
-                          {/* Card Content */}
-                          <div className="flex flex-1 items-center justify-center text-center px-2">
-                            <p className="font-display text-lg text-foreground leading-relaxed">
-                              {roomData.gameState.currentCard?.content}
-                            </p>
-                          </div>
-
-                          {/* Action Buttons - Only loser can complete/skip */}
-                          {amILoser() && (
-                            <div className="flex gap-2 mt-4">
-                              <Button
-                                variant="glass"
-                                size="sm"
-                                className="flex-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSkip();
-                                }}
-                              >
-                                <SkipForward className="h-4 w-4 mr-1" />
-                                Skip
-                              </Button>
-                              <Button
-                                variant="gold"
-                                size="sm"
-                                className="flex-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleComplete();
-                                }}
-                              >
-                                <Check className="h-4 w-4 mr-1" />
-                                Done
-                              </Button>
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
+                </motion.div>
               </motion.div>
             )}
 
