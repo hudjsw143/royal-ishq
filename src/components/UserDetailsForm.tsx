@@ -2,8 +2,11 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef } from "react";
-import { Camera, Pencil, Heart, ArrowRight } from "lucide-react";
+import { Camera, Pencil, Heart, ArrowRight, Loader2 } from "lucide-react";
 import romanticBg from "@/assets/romantic-bg.jpg";
+import { useFirebaseProfile } from "@/hooks/useFirebaseProfile";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { toast } from "sonner";
 
 interface UserDetails {
   name: string;
@@ -30,11 +33,17 @@ const UserDetailsForm = ({ onComplete, initialDetails }: UserDetailsFormProps) =
       profilePhoto: null,
     }
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { user } = useFirebaseAuth();
+  const { uploadProfilePhoto, saveProfile } = useFirebaseProfile();
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setDetails({ ...details, profilePhoto: reader.result as string });
@@ -53,9 +62,32 @@ const UserDetailsForm = ({ onComplete, initialDetails }: UserDetailsFormProps) =
     );
   };
 
-  const handleSubmit = () => {
-    if (isFormValid()) {
-      onComplete(details);
+  const handleSubmit = async () => {
+    if (!isFormValid()) return;
+
+    setIsSubmitting(true);
+    let finalDetails = { ...details };
+
+    try {
+      // If user is logged in and there's a new photo file, upload to Firebase
+      if (user && photoFile) {
+        const photoUrl = await uploadProfilePhoto(photoFile, user.uid);
+        if (photoUrl) {
+          finalDetails.profilePhoto = photoUrl;
+        }
+      }
+
+      // Save profile to Firebase if user is logged in
+      if (user) {
+        await saveProfile(user.uid, finalDetails);
+      }
+
+      onComplete(finalDetails);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast.error("Failed to save profile. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -238,10 +270,19 @@ const UserDetailsForm = ({ onComplete, initialDetails }: UserDetailsFormProps) =
               size="xl"
               className="mt-6 w-full"
               onClick={handleSubmit}
-              disabled={!isFormValid()}
+              disabled={!isFormValid() || isSubmitting}
             >
-              Continue to Lobby
-              <ArrowRight className="ml-2 h-5 w-5" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Continue to Lobby
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
             </Button>
           </div>
         </div>

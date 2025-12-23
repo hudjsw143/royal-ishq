@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import BootScreen from "@/components/BootScreen";
 import LoginScreen from "@/components/LoginScreen";
@@ -21,6 +21,19 @@ interface UserDetails {
   profilePhoto: string | null;
 }
 
+// App state persistence key
+const APP_STATE_KEY = "royalIshq_appState";
+const STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+interface SavedAppState {
+  currentScreen: AppScreen;
+  gameMode: GameMode | null;
+  gameMood: "casual" | "intimate" | null;
+  onlineRoomCode: string | null;
+  isOnlineHost: boolean;
+  timestamp: number;
+}
+
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<AppScreen>("boot");
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
@@ -31,14 +44,71 @@ const Index = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [onlineRoomCode, setOnlineRoomCode] = useState<string | null>(null);
   const [isOnlineHost, setIsOnlineHost] = useState(false);
+  const [stateRestored, setStateRestored] = useState(false);
 
-  // Check for existing user session
+  // Check for existing user session and restore app state
   useEffect(() => {
     const savedDetails = localStorage.getItem("royalIshq_userDetails");
     if (savedDetails) {
       setUserDetails(JSON.parse(savedDetails));
     }
+
+    // Restore app state if within expiry time
+    const savedState = localStorage.getItem(APP_STATE_KEY);
+    if (savedState && savedDetails) {
+      try {
+        const state: SavedAppState = JSON.parse(savedState);
+        const isExpired = Date.now() - state.timestamp > STATE_EXPIRY_MS;
+        
+        if (!isExpired && state.currentScreen !== "boot" && state.currentScreen !== "login") {
+          setGameMode(state.gameMode);
+          setGameMood(state.gameMood);
+          setOnlineRoomCode(state.onlineRoomCode);
+          setIsOnlineHost(state.isOnlineHost);
+          setStateRestored(true);
+          // Will set screen after boot
+        }
+      } catch (e) {
+        console.error("Error restoring app state:", e);
+      }
+    }
   }, []);
+
+  // Save app state on important changes
+  const saveAppState = useCallback(() => {
+    if (currentScreen === "boot" || currentScreen === "login") return;
+    
+    const appState: SavedAppState = {
+      currentScreen,
+      gameMode,
+      gameMood,
+      onlineRoomCode,
+      isOnlineHost,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(APP_STATE_KEY, JSON.stringify(appState));
+  }, [currentScreen, gameMode, gameMood, onlineRoomCode, isOnlineHost]);
+
+  // Save state when app goes to background or before unload
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        saveAppState();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      saveAppState();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [saveAppState]);
 
   // Check for room code in URL
   useEffect(() => {
@@ -52,6 +122,18 @@ const Index = () => {
 
   const handleBootComplete = () => {
     if (userDetails) {
+      // If state was restored, go to that screen (skip for online-game as room may be gone)
+      if (stateRestored && gameMode && gameMood) {
+        const savedState = localStorage.getItem(APP_STATE_KEY);
+        if (savedState) {
+          const state: SavedAppState = JSON.parse(savedState);
+          // Only restore game screen for offline/ai modes (online rooms expire)
+          if (state.currentScreen === "game" && (state.gameMode === "offline" || state.gameMode === "ai")) {
+            setCurrentScreen("game");
+            return;
+          }
+        }
+      }
       setCurrentScreen("lobby");
     } else {
       setCurrentScreen("login");
@@ -113,6 +195,7 @@ const Index = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("royalIshq_userDetails");
+    localStorage.removeItem(APP_STATE_KEY);
     setUserDetails(null);
     setGameMode(null);
     setGameMood(null);
