@@ -6,16 +6,20 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatMessage } from "@/hooks/useOnlineGame";
 import { auth } from "@/lib/firebase";
+import VoiceRecorder from "./VoiceRecorder";
+import VoiceMessage from "./VoiceMessage";
 
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (content: string, type: "text" | "emoji") => Promise<void>;
+  onSendVoiceMessage: (audioUrl: string, duration: number) => Promise<void>;
   partnerName: string;
+  roomCode: string;
 }
 
 const QUICK_EMOJIS = ["😂", "❤️", "🔥", "😘", "👍", "😍", "🙈", "💋", "😈", "🥵"];
 
-const ChatPanel = ({ messages, onSendMessage, partnerName }: ChatPanelProps) => {
+const ChatPanel = ({ messages, onSendMessage, onSendVoiceMessage, partnerName, roomCode }: ChatPanelProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -143,12 +147,28 @@ const ChatPanel = ({ messages, onSendMessage, partnerName }: ChatPanelProps) => 
                       No messages yet
                     </p>
                     <p className="text-xs text-muted-foreground/70">
-                      Send a message or emoji!
+                      Send a message, emoji, or voice note!
                     </p>
                   </div>
                 ) : (
                   messages.map((message) => {
                     const isMe = message.senderId === userId;
+                    
+                    // Render voice message
+                    if (message.type === "voice") {
+                      return (
+                        <VoiceMessage
+                          key={message.id}
+                          audioUrl={message.content}
+                          duration={message.duration || 0}
+                          isMe={isMe}
+                          senderName={!isMe ? message.senderName : undefined}
+                          timestamp={message.timestamp}
+                        />
+                      );
+                    }
+                    
+                    // Render text/emoji message
                     return (
                       <motion.div
                         key={message.id}
@@ -234,6 +254,13 @@ const ChatPanel = ({ messages, onSendMessage, partnerName }: ChatPanelProps) => 
               >
                 <Smile className="h-5 w-5" />
               </Button>
+              
+              {/* Voice Recorder */}
+              <VoiceRecorder
+                roomCode={roomCode}
+                onRecordingComplete={onSendVoiceMessage}
+              />
+              
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value.slice(0, 200))}

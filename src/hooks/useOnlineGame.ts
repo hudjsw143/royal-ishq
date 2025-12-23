@@ -40,8 +40,9 @@ export interface ChatMessage {
   senderId: string;
   senderName: string;
   content: string;
-  type: "text" | "emoji";
+  type: "text" | "emoji" | "voice";
   timestamp: number;
+  duration?: number; // Voice note duration in seconds
 }
 
 export interface RoomData {
@@ -79,6 +80,7 @@ interface UseOnlineGameReturn {
   subscribeToExistingRoom: (code: string, host: boolean) => void;
   manualReconnect: () => Promise<void>;
   sendMessage: (content: string, type: "text" | "emoji") => Promise<void>;
+  sendVoiceMessage: (audioUrl: string, duration: number) => Promise<void>;
 }
 
 const generateRoomCode = (): string => {
@@ -822,6 +824,38 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     }
   }, [roomCode, roomData, isHost]);
 
+  // Send voice message
+  const sendVoiceMessage = useCallback(async (audioUrl: string, duration: number) => {
+    if (!roomCode || !roomData) return;
+    
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    
+    const playerName = isHost ? roomData.host.name : (roomData.guest?.name || "Guest");
+    
+    const newMessage: ChatMessage = {
+      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      senderId: userId,
+      senderName: playerName,
+      content: audioUrl,
+      type: "voice",
+      timestamp: Date.now(),
+      duration,
+    };
+    
+    try {
+      const currentMessages = roomData.messages || [];
+      const updatedMessages = [...currentMessages, newMessage].slice(-50);
+      
+      await update(ref(database, `rooms/${roomCode}`), {
+        messages: updatedMessages,
+      });
+    } catch (err) {
+      console.error("Send voice message error:", err);
+      toast.error("Failed to send voice message");
+    }
+  }, [roomCode, roomData, isHost]);
+
   return {
     roomCode,
     roomData,
@@ -844,6 +878,7 @@ export const useOnlineGame = (): UseOnlineGameReturn => {
     subscribeToExistingRoom,
     manualReconnect,
     sendMessage,
+    sendVoiceMessage,
   };
 };
 

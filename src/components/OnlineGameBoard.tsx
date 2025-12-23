@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Sparkles, Trophy, RotateCcw, SkipForward, Check, Wifi, WifiOff } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useOnlineGame, RoomData } from "@/hooks/useOnlineGame";
 import OnlineTicTacToeBoard from "./OnlineTicTacToeBoard";
@@ -39,12 +39,14 @@ const OnlineGameBoard = ({
     leaveRoom,
     subscribeToExistingRoom,
     sendMessage,
+    sendVoiceMessage,
   } = useOnlineGame();
 
   const [showCard, setShowCard] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [disconnectWarning, setDisconnectWarning] = useState(false);
+  const wasConnectedRef = useRef(false);
 
   // Subscribe to room on mount
   useEffect(() => {
@@ -60,6 +62,28 @@ const OnlineGameBoard = ({
       setDisconnectWarning(false);
     }
   }, [opponentConnected, roomData]);
+
+  // Detect if partner left the room entirely - both players return to lobby
+  useEffect(() => {
+    const isActiveGame = roomData?.gameState?.gamePhase && 
+                         roomData.gameState.gamePhase !== "waiting";
+    
+    // If room was connected before but now gone (host deleted room)
+    if (wasConnectedRef.current && roomData === null) {
+      toast.error("Your partner left the game");
+      onBack();
+      return;
+    }
+    
+    // If guest left during active game (for host)
+    if (isActiveGame && roomData && !roomData.guest && isHost) {
+      toast.error("Your partner left the game");
+      onBack();
+      return;
+    }
+    
+    wasConnectedRef.current = !!roomData;
+  }, [roomData, isHost, onBack]);
 
   const handleBack = async () => {
     await leaveRoom();
@@ -337,15 +361,25 @@ const OnlineGameBoard = ({
                   </>
                 )}
                 
-                <Button
-                  variant="gold"
-                  size="lg"
-                  onClick={handleProceedToChallenge}
-                  className="mt-4"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Reveal Challenge
-                </Button>
+                {/* Only loser can proceed to reveal challenge */}
+                {amILoser() ? (
+                  <Button
+                    variant="gold"
+                    size="lg"
+                    onClick={handleProceedToChallenge}
+                    className="mt-4"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Reveal Challenge
+                  </Button>
+                ) : (
+                  <div className="flex flex-col items-center mt-4">
+                    <div className="animate-pulse text-4xl mb-2">⏳</div>
+                    <p className="text-muted-foreground">
+                      Waiting for {getLoserName()} to reveal...
+                    </p>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -598,7 +632,9 @@ const OnlineGameBoard = ({
         <ChatPanel
           messages={roomData.messages || []}
           onSendMessage={sendMessage}
+          onSendVoiceMessage={sendVoiceMessage}
           partnerName={opponentInfo?.name || "Partner"}
+          roomCode={roomCode}
         />
       </div>
     </motion.div>
