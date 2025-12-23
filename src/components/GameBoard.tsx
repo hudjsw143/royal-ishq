@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MessageCircle, Smile, Sparkles, Trophy, RotateCcw } from "lucide-react";
+import { ArrowLeft, MessageCircle, Smile, Sparkles, Trophy, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useTruthDareEngine } from "@/hooks/useTruthDareEngine";
 import { TruthDarePrompt, GameMode, Mood, RelationshipStatus } from "@/data/truthDareContent";
 import TicTacToeBoard from "./TicTacToeBoard";
 import TruthDareCard from "./TruthDareCard";
+import { useSoundEffects } from "@/contexts/SoundEffectsContext";
 interface PlayerInfo {
   name: string;
   photo: string | null;
@@ -29,6 +30,9 @@ const GameBoard = ({
   opponent,
   onBack
 }: GameBoardProps) => {
+  // Sound effects
+  const { isMuted, toggleMute } = useSoundEffects();
+
   // Game phase management
   const [gamePhase, setGamePhase] = useState<GamePhase>("tic-tac-toe");
   const [ticTacToeTurn, setTicTacToeTurn] = useState<"player" | "opponent">("player");
@@ -193,9 +197,20 @@ const GameBoard = ({
       <div className="relative z-10 flex h-full flex-col">
         {/* Header */}
         <header className="flex items-center justify-between p-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleMute} 
+              className={`text-muted-foreground hover:text-foreground ${isMuted ? 'text-destructive' : ''}`}
+              title={isMuted ? "Unmute SFX" : "Mute SFX"}
+            >
+              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
+          </div>
 
           {/* Score Display */}
           <div className="flex items-center gap-4 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border/30">
