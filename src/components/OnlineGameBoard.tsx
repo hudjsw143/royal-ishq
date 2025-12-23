@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Sparkles, Trophy, RotateCcw, SkipForward, Check, Wifi, WifiOff, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Sparkles, Trophy, RotateCcw, SkipForward, Check, Wifi, WifiOff } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useOnlineGame, RoomData } from "@/hooks/useOnlineGame";
@@ -9,7 +9,6 @@ import ChatPanel from "./ChatPanel";
 import { ALL_PROMPTS, TruthDarePrompt } from "@/data/truthDareContent";
 import { toast } from "sonner";
 import { useSoundEffects } from "@/contexts/SoundEffectsContext";
-
 interface PlayerInfo {
   name: string;
   photo: string | null;
@@ -43,7 +42,7 @@ const OnlineGameBoard = ({
     sendVoiceMessage,
   } = useOnlineGame();
 
-  const { isMuted, toggleMute } = useSoundEffects();
+  const { playSound } = useSoundEffects();
 
   const [showCard, setShowCard] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
@@ -128,6 +127,7 @@ const OnlineGameBoard = ({
   };
 
   const handleProceedToChallenge = async () => {
+    playSound("buttonClick");
     // Update scores based on winner
     const winner = roomData.gameState.winner;
     if (winner && winner !== "draw") {
@@ -137,6 +137,7 @@ const OnlineGameBoard = ({
   };
 
   const handleSpinWheel = async () => {
+    playSound("wheelSpin");
     setIsSpinning(true);
     
     setTimeout(async () => {
@@ -160,6 +161,7 @@ const OnlineGameBoard = ({
           content: randomPrompt.content,
           intensity: randomPrompt.intensity,
         });
+        playSound("cardFlip");
         setShowCard(true);
         setCardRevealed(false);
       }
@@ -169,17 +171,20 @@ const OnlineGameBoard = ({
 
   const handleCardTap = () => {
     if (!cardRevealed) {
+      playSound("cardFlip");
       setCardRevealed(true);
     }
   };
 
   const handleComplete = async () => {
+    playSound("buttonClick");
     await updateGamePhase("round-complete");
     setShowCard(false);
     setCardRevealed(false);
   };
 
   const handleSkip = async () => {
+    playSound("buttonClick");
     await updateGamePhase("round-complete");
     setShowCard(false);
     setCardRevealed(false);
@@ -190,6 +195,7 @@ const OnlineGameBoard = ({
   };
 
   const handleNewRound = async () => {
+    playSound("gameStart");
     await startNewRound();
     setShowCard(false);
     setCardRevealed(false);
@@ -229,26 +235,14 @@ const OnlineGameBoard = ({
       <div className="relative z-10 flex h-full flex-col">
         {/* Header */}
         <header className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleMute} 
-              className={`text-muted-foreground hover:text-foreground ${isMuted ? 'text-destructive' : ''}`}
-              title={isMuted ? "Unmute SFX" : "Mute SFX"}
-            >
-              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </Button>
-          </div>
-
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           {/* Score Display */}
           <div className="flex items-center gap-4 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border/30">
             <div className="text-center">

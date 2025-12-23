@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import AudioLibrary from "./AudioLibrary";
 import { useAudio } from "@/contexts/AudioContext";
+import { useSoundEffects } from "@/contexts/SoundEffectsContext";
 
 interface UserDetails {
   name: string;
@@ -42,6 +43,7 @@ const ProfilePanel = ({
 }: ProfilePanelProps) => {
   const [showAudioLibrary, setShowAudioLibrary] = useState(false);
   const { currentTrack, isPlaying, togglePlay } = useAudio();
+  const { isMuted: isSfxMuted, toggleMute: toggleSfxMute } = useSoundEffects();
 
   const menuItems = [
     {
@@ -223,34 +225,49 @@ const ProfilePanel = ({
                     transition={{ delay: 0.45 }}
                     className="border-t border-border/50 p-4"
                   >
-                    <div className="flex items-center justify-between mb-3 px-2">
-                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Background Music
-                      </p>
-                      {currentTrack && (
-                        <p className="text-xs text-secondary truncate max-w-[140px]">
-                          {currentTrack.name}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-3">
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3 px-2">
+                      Audio Settings
+                    </p>
+                    
+                    {/* Background Music Toggle */}
+                    <div className="flex items-center justify-between mb-3 px-2 py-2 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Music className="h-4 w-4 text-secondary" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Background Music</p>
+                          {currentTrack && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                              {currentTrack.name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                       <Button
-                        variant="glass"
-                        size="lg"
-                        className={`flex-1 ${!isPlaying ? "bg-destructive/20 text-destructive" : "bg-secondary/20 text-secondary"}`}
+                        variant="ghost"
+                        size="icon"
+                        className={`${!isPlaying ? "text-destructive" : "text-secondary"}`}
                         onClick={togglePlay}
                       >
-                        {isPlaying ? (
-                          <>
-                            <Volume2 className="mr-2 h-4 w-4" />
-                            Music On
-                          </>
-                        ) : (
-                          <>
-                            <VolumeX className="mr-2 h-4 w-4" />
-                            Music Off
-                          </>
-                        )}
+                        {isPlaying ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                      </Button>
+                    </div>
+
+                    {/* Sound Effects Toggle */}
+                    <div className="flex items-center justify-between px-2 py-2 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Volume2 className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Sound Effects</p>
+                          <p className="text-xs text-muted-foreground">Game sounds</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`${isSfxMuted ? "text-destructive" : "text-primary"}`}
+                        onClick={toggleSfxMute}
+                      >
+                        {isSfxMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                       </Button>
                     </div>
                   </motion.div>
