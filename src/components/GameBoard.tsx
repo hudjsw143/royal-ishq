@@ -1,13 +1,16 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, MessageCircle, Smile, Sparkles, Trophy, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useTruthDareEngine } from "@/hooks/useTruthDareEngine";
 import { TruthDarePrompt, GameMode, Mood, RelationshipStatus } from "@/data/truthDareContent";
 import TicTacToeBoard from "./TicTacToeBoard";
 import TruthDareCard from "./TruthDareCard";
 import { useSoundEffects } from "@/contexts/SoundEffectsContext";
+import { useFirebaseProfile } from "@/hooks/useFirebaseProfile";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+
 interface PlayerInfo {
   name: string;
   photo: string | null;
@@ -22,6 +25,11 @@ interface GameBoardProps {
   onBack: () => void;
 }
 type GamePhase = "tic-tac-toe" | "reveal-loser" | "truth-dare" | "round-complete";
+
+// localStorage keys for score persistence
+const OFFLINE_SCORES_KEY = "royalIshq_offlineScores";
+const AI_SCORES_KEY = "royalIshq_aiScores";
+
 const GameBoard = ({
   mode,
   mood = "casual",
@@ -32,6 +40,8 @@ const GameBoard = ({
 }: GameBoardProps) => {
   // Sound effects
   const { playSound } = useSoundEffects();
+  const { saveGameHistory } = useFirebaseProfile();
+  const { user } = useFirebaseAuth();
 
   // Game phase management
   const [gamePhase, setGamePhase] = useState<GamePhase>("tic-tac-toe");
@@ -54,6 +64,33 @@ const GameBoard = ({
 
   // Key to force TicTacToeBoard remount
   const [boardKey, setBoardKey] = useState(0);
+
+  // Load saved scores on mount (for AI and offline modes)
+  useEffect(() => {
+    if (mode === "online") return;
+    
+    const storageKey = mode === "ai" ? AI_SCORES_KEY : OFFLINE_SCORES_KEY;
+    const savedData = localStorage.getItem(storageKey);
+    
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setScores(parsed.scores);
+        setRoundsPlayed(parsed.roundsPlayed);
+      } catch (e) {
+        console.error("Error loading saved scores:", e);
+      }
+    }
+  }, [mode]);
+
+  // Save scores whenever they change (for AI and offline modes)
+  useEffect(() => {
+    if (mode === "online") return;
+    if (roundsPlayed === 0) return; // Don't save initial state
+    
+    const storageKey = mode === "ai" ? AI_SCORES_KEY : OFFLINE_SCORES_KEY;
+    localStorage.setItem(storageKey, JSON.stringify({ scores, roundsPlayed }));
+  }, [scores, roundsPlayed, mode]);
 
   // Initialize the Truth & Dare engine with game configuration
   const engine = useTruthDareEngine({
@@ -208,7 +245,22 @@ const GameBoard = ({
       <div className="relative z-10 flex h-full flex-col">
         {/* Header */}
         <header className="flex items-center justify-between p-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="icon" onClick={async () => {
+            // Save game history before leaving
+            if (user && roundsPlayed > 0) {
+              await saveGameHistory(
+                user.uid,
+                {
+                  name: opponent.name,
+                  photo: opponent.photo,
+                },
+                mode as "online" | "ai" | "offline",
+                scores,
+                roundsPlayed
+              );
+            }
+            onBack();
+          }} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Button>
 

@@ -9,6 +9,8 @@ import ChatPanel from "./ChatPanel";
 import { ALL_PROMPTS, TruthDarePrompt } from "@/data/truthDareContent";
 import { toast } from "sonner";
 import { useSoundEffects } from "@/contexts/SoundEffectsContext";
+import { useFirebaseProfile } from "@/hooks/useFirebaseProfile";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 interface PlayerInfo {
   name: string;
   photo: string | null;
@@ -43,6 +45,8 @@ const OnlineGameBoard = ({
   } = useOnlineGame();
 
   const { playSound } = useSoundEffects();
+  const { saveGameHistory } = useFirebaseProfile();
+  const { user } = useFirebaseAuth();
 
   const [showCard, setShowCard] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
@@ -87,7 +91,26 @@ const OnlineGameBoard = ({
     wasConnectedRef.current = !!roomData;
   }, [roomData, isHost, onBack]);
 
+  // Save game history before leaving
   const handleBack = async () => {
+    // Save game history if user is logged in and game was played
+    if (user && roomData && roomData.gameState.roundsPlayed > 0) {
+      const opponentInfo = isHost ? roomData.guest : roomData.host;
+      await saveGameHistory(
+        user.uid,
+        {
+          id: opponentInfo?.name || undefined,
+          name: opponentInfo?.name || "Partner",
+          photo: opponentInfo?.photo || null,
+        },
+        "online",
+        {
+          player: isHost ? roomData.gameState.scores.host : roomData.gameState.scores.guest,
+          opponent: isHost ? roomData.gameState.scores.guest : roomData.gameState.scores.host,
+        },
+        roomData.gameState.roundsPlayed
+      );
+    }
     await leaveRoom();
     onBack();
   };
