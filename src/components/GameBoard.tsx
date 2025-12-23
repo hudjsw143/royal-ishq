@@ -332,16 +332,16 @@ const GameBoard = ({
                       Tap to reveal {getLoserName()}'s fate
                     </p>
                   </div> : <motion.div initial={{
-              rotateY: 180,
-              opacity: 0
+              opacity: 0,
+              scale: 0.9
             }} animate={{
-              rotateY: cardRevealed ? 0 : 180,
-              opacity: 1
+              opacity: 1,
+              scale: 1
             }} transition={{
-              duration: 0.6
-            }} onClick={handleCardTap} className="perspective-1000 cursor-pointer">
+              duration: 0.4
+            }} onClick={handleCardTap} className="cursor-pointer">
                     <div className="glass-card relative h-96 w-72 overflow-hidden rounded-3xl p-6 shadow-2xl">
-                      {!cardRevealed ? <div className="flex h-full flex-col items-center justify-center bg-[royal-dark-light] bg-royal-rose">
+                      {!cardRevealed ? <div className="flex h-full flex-col items-center justify-center">
                           <div className="text-6xl mb-4">🎴</div>
                           <p className="text-muted-foreground">Tap to reveal</p>
                         </div> : <motion.div initial={{
