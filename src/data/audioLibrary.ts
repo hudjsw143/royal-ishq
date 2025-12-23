@@ -9,31 +9,31 @@ export const audioTracks: AudioTrack[] = [
   {
     id: "1",
     name: "Teri Deewani",
-    audioUrl: "https://drive.google.com/uc?export=download&id=1dTQGowne4Ws83Pplsg9T55davZc1ctID",
-    coverUrl: "https://drive.google.com/uc?export=download&id=1GErgWOXPK3JjMmF06vknFoMV5VyFFvLt"
+    audioUrl: "https://github.com/hudjsw143/royal-ishq-media/raw/refs/heads/main/Teri%20Deewani%20Official%20Lyric%20Video%20%20Kailash%20Kher%20%20Paresh%20%20Naresh%20-%20256.mp3",
+    coverUrl: "https://raw.githubusercontent.com/hudjsw143/royal-ishq-media/main/covers/Teri%20Deewani_imgupscaler.ai_General_4K.jpg"
   },
   {
     id: "2",
     name: "Mann Mera",
-    audioUrl: "https://drive.google.com/uc?export=download&id=1KfRaQAu3ZKJKXqYRB0Tr0owPhEg1RChw",
-    coverUrl: "https://drive.google.com/uc?export=download&id=1NI4fPkwDDhX2BnHuqYKdQUOYwIU_WQ0g"
+    audioUrl: "https://github.com/hudjsw143/royal-ishq-media/raw/refs/heads/main/Mann%20Mera.mp3",
+    coverUrl: "https://raw.githubusercontent.com/hudjsw143/royal-ishq-media/main/covers/Mann%20Mera_imgupscaler.ai_General_4K.jpg"
   },
   {
     id: "3",
     name: "Piya Ghar Aavenge",
-    audioUrl: "https://drive.google.com/uc?export=download&id=1X3r31x3pAPo6vRmKVuGHJLrL1VcOmNKB",
-    coverUrl: "https://drive.google.com/uc?export=download&id=1LCCqKOXI2rUv-37pT7z8VKkexC3rlAR_"
+    audioUrl: "https://github.com/hudjsw143/royal-ishq-media/raw/refs/heads/main/Piya%20Ghar%20Aavenge%20%20Lyrical%20Video%20%20Kailash%20Kher%20%20Paresh%20Kamath%20%20Naresh%20Kamath%20%20Chaandan%20Mein%20-%20256.mp3",
+    coverUrl: "https://raw.githubusercontent.com/hudjsw143/royal-ishq-media/main/covers/Piya%20Ghar%20Aavenge_imgupscaler.ai_General_4K.jpg"
   },
   {
     id: "4",
     name: "Saiyaan",
-    audioUrl: "https://drive.google.com/uc?export=download&id=1YD0VCvLeLQZhbf3l-VZH9f1x-p-k3MQR",
-    coverUrl: "https://drive.google.com/uc?export=download&id=1k1Cl0mNLQ5E51xZVVuoiUHzUCPMVu2Rb"
+    audioUrl: "https://github.com/hudjsw143/royal-ishq-media/raw/refs/heads/main/Saiyyan%20-%20Lyrical%20Video%20%20Kailash%20Kher%20Superhit%20Song%20%20Paresh%20Kamath,%20Naresh%20Kamath%20-%20256.mp3",
+    coverUrl: "https://raw.githubusercontent.com/hudjsw143/royal-ishq-media/main/covers/Saiyaan_imgupscaler.ai_General_4K.jpg"
   },
   {
     id: "5",
     name: "Tujhe Main Pyar Karoon",
-    audioUrl: "https://drive.google.com/uc?export=download&id=1c0cSa2LbNNw7EYr5XNKGxdAdN8dNVfgM",
-    coverUrl: "https://drive.google.com/uc?export=download&id=1VHPmuxIjXHnMBHH5KRaVCuxYuaSWfxE_"
+    audioUrl: "https://github.com/hudjsw143/royal-ishq-media/raw/refs/heads/main/Tujhe%20Main%20Pyar%20Karoon%20(%20LYRICS%20)%20(%201920%20Movie%20)%20Kailash%20Kher%20%20@WorldFamousLyrics%20-%20256.mp3",
+    coverUrl: "https://raw.githubusercontent.com/hudjsw143/royal-ishq-media/main/covers/Tujhe%20Main%20Pyar%20Karu_imgupscaler.ai_General_4K.jpg"
   }
 ];
