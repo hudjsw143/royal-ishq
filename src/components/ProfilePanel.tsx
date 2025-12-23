@@ -225,7 +225,7 @@ const ProfilePanel = ({
                   >
                     <div className="flex items-center justify-between mb-3 px-2">
                       <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Now Playing
+                        Background Music
                       </p>
                       {currentTrack && (
                         <p className="text-xs text-secondary truncate max-w-[140px]">
@@ -237,18 +237,18 @@ const ProfilePanel = ({
                       <Button
                         variant="glass"
                         size="lg"
-                        className={`flex-1 ${isPlaying ? "bg-secondary/20 text-secondary" : ""}`}
+                        className={`flex-1 ${!isPlaying ? "bg-destructive/20 text-destructive" : "bg-secondary/20 text-secondary"}`}
                         onClick={togglePlay}
                       >
                         {isPlaying ? (
                           <>
-                            <VolumeX className="mr-2 h-4 w-4" />
-                            Pause
+                            <Volume2 className="mr-2 h-4 w-4" />
+                            Music On
                           </>
                         ) : (
                           <>
-                            <Volume2 className="mr-2 h-4 w-4" />
-                            Play
+                            <VolumeX className="mr-2 h-4 w-4" />
+                            Music Off
                           </>
                         )}
                       </Button>
