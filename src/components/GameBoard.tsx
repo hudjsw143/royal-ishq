@@ -1,11 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MessageCircle, Smile, SkipForward, Check, Sparkles, Trophy, RotateCcw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ArrowLeft, MessageCircle, Smile, Sparkles, Trophy, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import romanticBg from "@/assets/romantic-bg.jpg";
 import { useTruthDareEngine } from "@/hooks/useTruthDareEngine";
 import { TruthDarePrompt, GameMode, Mood, RelationshipStatus } from "@/data/truthDareContent";
 import TicTacToeBoard from "./TicTacToeBoard";
+import TruthDareCard from "./TruthDareCard";
 interface PlayerInfo {
   name: string;
   photo: string | null;
@@ -331,61 +332,13 @@ const GameBoard = ({
                     <p className="mt-6 text-sm text-muted-foreground">
                       Tap to reveal {getLoserName()}'s fate
                     </p>
-                  </div> : <motion.div initial={{
-              opacity: 0,
-              scale: 0.9
-            }} animate={{
-              opacity: 1,
-              scale: 1
-            }} transition={{
-              duration: 0.4
-            }} onClick={handleCardTap} className="cursor-pointer">
-                    <div className="glass-card relative h-96 w-72 overflow-hidden rounded-3xl p-6 shadow-2xl">
-                      {!cardRevealed ? <div className="flex h-full flex-col items-center justify-center">
-                          <div className="text-6xl mb-4">🎴</div>
-                          <p className="text-muted-foreground">Tap to reveal</p>
-                        </div> : <motion.div initial={{
-                  opacity: 0
-                }} animate={{
-                  opacity: 1
-                }} className="flex h-full flex-col">
-                          {/* Card Type Badge */}
-                          <div className={`mx-auto mb-4 rounded-full px-4 py-1 text-sm font-semibold ${currentCard?.type === "truth" ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"}`}>
-                            {currentCard?.type === "truth" ? "💭 TRUTH" : "🔥 DARE"}
-                          </div>
-
-                          {/* Intensity Level Dots */}
-                          <div className="flex justify-center gap-1 mb-3">
-                            {[1, 2, 3, 4, 5].map(level => <div key={level} className={`h-1.5 w-1.5 rounded-full transition-colors ${level <= (currentCard?.intensity || 1) ? "bg-secondary" : "bg-border/30"}`} />)}
-                          </div>
-
-                          {/* Card Content */}
-                          <div className="flex flex-1 items-center justify-center text-center px-2">
-                            <p className="font-display text-lg text-foreground leading-relaxed">
-                              {currentCard?.content}
-                            </p>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex gap-2 mt-4">
-                            <Button variant="glass" size="sm" className="flex-1" onClick={e => {
-                      e.stopPropagation();
-                      handleSkip();
-                    }}>
-                              <SkipForward className="h-4 w-4 mr-1" />
-                              Skip
-                            </Button>
-                            <Button variant="gold" size="sm" className="flex-1" onClick={e => {
-                      e.stopPropagation();
-                      handleComplete();
-                    }}>
-                              <Check className="h-4 w-4 mr-1" />
-                              Done
-                            </Button>
-                          </div>
-                        </motion.div>}
-                    </div>
-                  </motion.div>}
+                  </div> : <TruthDareCard
+                    card={currentCard}
+                    isRevealed={cardRevealed}
+                    onTap={handleCardTap}
+                    onComplete={handleComplete}
+                    onSkip={handleSkip}
+                  />}
               </motion.div>}
 
             {/* Phase 4: Round Complete */}
