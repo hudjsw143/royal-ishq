@@ -6,13 +6,11 @@ import romanticBg from "@/assets/romantic-bg.jpg";
 import { useTruthDareEngine } from "@/hooks/useTruthDareEngine";
 import { TruthDarePrompt, GameMode, Mood, RelationshipStatus } from "@/data/truthDareContent";
 import TicTacToeBoard from "./TicTacToeBoard";
-
 interface PlayerInfo {
   name: string;
   photo: string | null;
   isAI?: boolean;
 }
-
 interface GameBoardProps {
   mode: "offline" | "ai" | "online";
   mood?: "casual" | "intimate";
@@ -21,33 +19,34 @@ interface GameBoardProps {
   opponent: PlayerInfo;
   onBack: () => void;
 }
-
 type GamePhase = "tic-tac-toe" | "reveal-loser" | "truth-dare" | "round-complete";
-
 const GameBoard = ({
   mode,
   mood = "casual",
   relationshipStatus = "relationship",
   currentPlayer,
   opponent,
-  onBack,
+  onBack
 }: GameBoardProps) => {
   // Game phase management
   const [gamePhase, setGamePhase] = useState<GamePhase>("tic-tac-toe");
   const [ticTacToeTurn, setTicTacToeTurn] = useState<"player" | "opponent">("player");
   const [gameWinner, setGameWinner] = useState<"player" | "opponent" | "draw" | null>(null);
   const [loser, setLoser] = useState<"player" | "opponent" | null>(null);
-  
+
   // Score tracking
-  const [scores, setScores] = useState({ player: 0, opponent: 0 });
+  const [scores, setScores] = useState({
+    player: 0,
+    opponent: 0
+  });
   const [roundsPlayed, setRoundsPlayed] = useState(0);
-  
+
   // Truth/Dare state
   const [showCard, setShowCard] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
   const [currentCard, setCurrentCard] = useState<TruthDarePrompt | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
-  
+
   // Key to force TicTacToeBoard remount
   const [boardKey, setBoardKey] = useState(0);
 
@@ -55,7 +54,7 @@ const GameBoard = ({
   const engine = useTruthDareEngine({
     mode: mode as GameMode,
     mood: mood as Mood,
-    status: relationshipStatus as RelationshipStatus,
+    status: relationshipStatus as RelationshipStatus
   });
 
   // Handle Tic Tac Toe move
@@ -67,7 +66,6 @@ const GameBoard = ({
   // Handle Tic Tac Toe game end
   const handleTicTacToeEnd = (winner: "player" | "opponent" | "draw") => {
     setGameWinner(winner);
-    
     if (winner === "draw") {
       // On draw, randomly pick who gets the challenge
       const randomLoser = Math.random() > 0.5 ? "player" : "opponent";
@@ -75,16 +73,21 @@ const GameBoard = ({
     } else {
       // Winner gets a point, loser gets the challenge
       if (winner === "player") {
-        setScores(prev => ({ ...prev, player: prev.player + 1 }));
+        setScores(prev => ({
+          ...prev,
+          player: prev.player + 1
+        }));
         setLoser("opponent");
       } else {
-        setScores(prev => ({ ...prev, opponent: prev.opponent + 1 }));
+        setScores(prev => ({
+          ...prev,
+          opponent: prev.opponent + 1
+        }));
         setLoser("player");
       }
     }
-    
     setRoundsPlayed(prev => prev + 1);
-    
+
     // Transition to reveal phase
     setTimeout(() => {
       setGamePhase("reveal-loser");
@@ -102,16 +105,14 @@ const GameBoard = ({
   // Handle spin wheel for Truth/Dare
   const handleSpinWheel = () => {
     setIsSpinning(true);
-    
     setTimeout(() => {
       const isTruth = Math.random() > 0.5;
       let prompt = engine.getPrompt(isTruth ? "truth" : "dare");
-      
+
       // If no prompt found, try the other type
       if (!prompt) {
         prompt = engine.getPrompt(isTruth ? "dare" : "truth");
       }
-      
       if (prompt) {
         setCurrentCard(prompt);
         setShowCard(true);
@@ -121,14 +122,12 @@ const GameBoard = ({
         const fallbackPrompt: TruthDarePrompt = {
           id: 'fallback_1',
           type: isTruth ? 'truth' : 'dare',
-          content: isTruth 
-            ? "Share your favorite memory with your partner."
-            : "Give your partner a heartfelt compliment.",
+          content: isTruth ? "Share your favorite memory with your partner." : "Give your partner a heartfelt compliment.",
           mode: mode as GameMode,
           mood: mood as Mood,
           status: relationshipStatus as RelationshipStatus,
           intensity: 2,
-          category: 'fallback',
+          category: 'fallback'
         };
         setCurrentCard(fallbackPrompt);
         setShowCard(true);
@@ -137,18 +136,15 @@ const GameBoard = ({
       setIsSpinning(false);
     }, 800);
   };
-
   const handleCardTap = () => {
     if (!cardRevealed) {
       setCardRevealed(true);
     }
   };
-
   const handleComplete = () => {
     engine.onPromptCompleted();
     setGamePhase("round-complete");
   };
-
   const handleSkip = () => {
     engine.onPromptSkipped();
     setGamePhase("round-complete");
@@ -167,31 +163,28 @@ const GameBoard = ({
     // Force TicTacToeBoard remount
     setBoardKey(prev => prev + 1);
   };
-
   const getLoserName = () => {
     if (loser === "player") return currentPlayer.name;
     return opponent.name;
   };
-
   const getWinnerName = () => {
     if (gameWinner === "player") return currentPlayer.name;
     if (gameWinner === "opponent") return opponent.name;
     return "Nobody";
   };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.8 }}
-      className="fixed inset-0 z-40 overflow-hidden"
-    >
+  return <motion.div initial={{
+    opacity: 0
+  }} animate={{
+    opacity: 1
+  }} exit={{
+    opacity: 0
+  }} transition={{
+    duration: 0.8
+  }} className="fixed inset-0 z-40 overflow-hidden">
       {/* Background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${romanticBg})` }}
-      >
+      <div className="absolute inset-0 bg-cover bg-center" style={{
+      backgroundImage: `url(${romanticBg})`
+    }}>
         <div className="absolute inset-0 bg-background/90 backdrop-blur-sm" />
       </div>
 
@@ -199,12 +192,7 @@ const GameBoard = ({
       <div className="relative z-10 flex h-full flex-col">
         {/* Header */}
         <header className="flex items-center justify-between p-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="text-muted-foreground hover:text-foreground"
-          >
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Button>
 
@@ -230,17 +218,9 @@ const GameBoard = ({
               </p>
             </div>
             <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-secondary/30">
-              {opponent.photo ? (
-                <img
-                  src={opponent.photo}
-                  alt={opponent.name}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-muted text-sm font-semibold text-muted-foreground">
+              {opponent.photo ? <img src={opponent.photo} alt={opponent.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-muted text-sm font-semibold text-muted-foreground">
                   {opponent.isAI ? "🤖" : opponent.name.charAt(0)}
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </header>
@@ -257,51 +237,45 @@ const GameBoard = ({
         <main className="flex flex-1 flex-col items-center justify-center px-4">
           <AnimatePresence mode="wait">
             {/* Phase 1: Tic Tac Toe */}
-            {gamePhase === "tic-tac-toe" && (
-              <motion.div
-                key="tic-tac-toe"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex flex-col items-center"
-              >
-                <TicTacToeBoard
-                  key={boardKey}
-                  playerSymbol="👑"
-                  opponentSymbol="❤️"
-                  currentTurn={ticTacToeTurn}
-                  isAIOpponent={mode === "ai"}
-                  onMove={handleTicTacToeMove}
-                  onGameEnd={handleTicTacToeEnd}
-                />
-              </motion.div>
-            )}
+            {gamePhase === "tic-tac-toe" && <motion.div key="tic-tac-toe" initial={{
+            opacity: 0,
+            scale: 0.9
+          }} animate={{
+            opacity: 1,
+            scale: 1
+          }} exit={{
+            opacity: 0,
+            scale: 0.9
+          }} className="flex flex-col items-center">
+                <TicTacToeBoard key={boardKey} playerSymbol="👑" opponentSymbol="❤️" currentTurn={ticTacToeTurn} isAIOpponent={mode === "ai"} onMove={handleTicTacToeMove} onGameEnd={handleTicTacToeEnd} />
+              </motion.div>}
 
             {/* Phase 2: Reveal Loser */}
-            {gamePhase === "reveal-loser" && (
-              <motion.div
-                key="reveal-loser"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="text-center"
-              >
-                {gameWinner === "draw" ? (
-                  <>
+            {gamePhase === "reveal-loser" && <motion.div key="reveal-loser" initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} exit={{
+            opacity: 0,
+            y: -20
+          }} className="text-center">
+                {gameWinner === "draw" ? <>
                     <div className="text-6xl mb-4">🤝</div>
                     <h2 className="font-display text-2xl text-foreground mb-2">It's a Draw!</h2>
                     <p className="text-muted-foreground mb-6">
                       <span className="text-secondary font-medium">{getLoserName()}</span> was randomly chosen for the challenge
                     </p>
-                  </>
-                ) : (
-                  <>
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 200 }}
-                      className="text-6xl mb-4"
-                    >
+                  </> : <>
+                    <motion.div initial={{
+                scale: 0
+              }} animate={{
+                scale: 1
+              }} transition={{
+                type: "spring",
+                stiffness: 200
+              }} className="text-6xl mb-4">
                       <Trophy className="h-16 w-16 mx-auto text-secondary" />
                     </motion.div>
                     <h2 className="font-display text-2xl text-foreground mb-2">
@@ -310,49 +284,45 @@ const GameBoard = ({
                     <p className="text-muted-foreground mb-6">
                       <span className="text-primary font-medium">{getLoserName()}</span> must face a challenge
                     </p>
-                  </>
-                )}
+                  </>}
                 
-                <Button
-                  variant="gold"
-                  size="lg"
-                  onClick={handleProceedToChallenge}
-                  className="mt-4"
-                >
+                <Button variant="gold" size="lg" onClick={handleProceedToChallenge} className="mt-4">
                   <Sparkles className="h-4 w-4 mr-2" />
                   Reveal Challenge
                 </Button>
-              </motion.div>
-            )}
+              </motion.div>}
 
             {/* Phase 3: Truth or Dare */}
-            {gamePhase === "truth-dare" && (
-              <motion.div
-                key="truth-dare"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="text-center"
-              >
+            {gamePhase === "truth-dare" && <motion.div key="truth-dare" initial={{
+            opacity: 0,
+            scale: 0.9
+          }} animate={{
+            opacity: 1,
+            scale: 1
+          }} exit={{
+            opacity: 0,
+            scale: 0.9
+          }} className="text-center">
                 <p className="mb-2 text-muted-foreground">
                   Challenge for <span className="text-secondary font-medium">{getLoserName()}</span>
                 </p>
 
-                {!showCard ? (
-                  <div className="flex flex-col items-center">
+                {!showCard ? <div className="flex flex-col items-center">
                     {/* Spin Button */}
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleSpinWheel}
-                      disabled={isSpinning}
-                      className="relative h-40 w-40 rounded-full bg-gradient-to-br from-primary via-secondary to-primary shadow-2xl disabled:opacity-70"
-                    >
-                      <motion.div 
-                        className="absolute inset-2 flex items-center justify-center rounded-full bg-card"
-                        animate={isSpinning ? { rotate: 360 } : { rotate: 0 }}
-                        transition={isSpinning ? { duration: 0.8, repeat: Infinity, ease: "linear" } : {}}
-                      >
+                    <motion.button whileHover={{
+                scale: 1.05
+              }} whileTap={{
+                scale: 0.95
+              }} onClick={handleSpinWheel} disabled={isSpinning} className="relative h-40 w-40 rounded-full bg-gradient-to-br from-primary via-secondary to-primary shadow-2xl disabled:opacity-70">
+                      <motion.div className="absolute inset-2 flex items-center justify-center rounded-full bg-card" animate={isSpinning ? {
+                  rotate: 360
+                } : {
+                  rotate: 0
+                }} transition={isSpinning ? {
+                  duration: 0.8,
+                  repeat: Infinity,
+                  ease: "linear"
+                } : {}}>
                         <span className="font-display text-xl font-bold text-foreground">
                           {isSpinning ? "..." : "SPIN"}
                         </span>
@@ -361,48 +331,32 @@ const GameBoard = ({
                     <p className="mt-6 text-sm text-muted-foreground">
                       Tap to reveal {getLoserName()}'s fate
                     </p>
-                  </div>
-                ) : (
-                  <motion.div
-                    initial={{ rotateY: 180, opacity: 0 }}
-                    animate={{ rotateY: cardRevealed ? 0 : 180, opacity: 1 }}
-                    transition={{ duration: 0.6 }}
-                    onClick={handleCardTap}
-                    className="perspective-1000 cursor-pointer"
-                  >
+                  </div> : <motion.div initial={{
+              rotateY: 180,
+              opacity: 0
+            }} animate={{
+              rotateY: cardRevealed ? 0 : 180,
+              opacity: 1
+            }} transition={{
+              duration: 0.6
+            }} onClick={handleCardTap} className="perspective-1000 cursor-pointer">
                     <div className="glass-card relative h-96 w-72 overflow-hidden rounded-3xl p-6 shadow-2xl">
-                      {!cardRevealed ? (
-                        <div className="flex h-full flex-col items-center justify-center">
+                      {!cardRevealed ? <div className="flex h-full flex-col items-center justify-center bg-[royal-dark-light] bg-royal-rose">
                           <div className="text-6xl mb-4">🎴</div>
                           <p className="text-muted-foreground">Tap to reveal</p>
-                        </div>
-                      ) : (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="flex h-full flex-col"
-                        >
+                        </div> : <motion.div initial={{
+                  opacity: 0
+                }} animate={{
+                  opacity: 1
+                }} className="flex h-full flex-col">
                           {/* Card Type Badge */}
-                          <div className={`mx-auto mb-4 rounded-full px-4 py-1 text-sm font-semibold ${
-                            currentCard?.type === "truth" 
-                              ? "bg-secondary/20 text-secondary" 
-                              : "bg-primary/20 text-primary"
-                          }`}>
+                          <div className={`mx-auto mb-4 rounded-full px-4 py-1 text-sm font-semibold ${currentCard?.type === "truth" ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"}`}>
                             {currentCard?.type === "truth" ? "💭 TRUTH" : "🔥 DARE"}
                           </div>
 
                           {/* Intensity Level Dots */}
                           <div className="flex justify-center gap-1 mb-3">
-                            {[1, 2, 3, 4, 5].map((level) => (
-                              <div
-                                key={level}
-                                className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                                  level <= (currentCard?.intensity || 1)
-                                    ? "bg-secondary"
-                                    : "bg-border/30"
-                                }`}
-                              />
-                            ))}
+                            {[1, 2, 3, 4, 5].map(level => <div key={level} className={`h-1.5 w-1.5 rounded-full transition-colors ${level <= (currentCard?.intensity || 1) ? "bg-secondary" : "bg-border/30"}`} />)}
                           </div>
 
                           {/* Card Content */}
@@ -414,48 +368,37 @@ const GameBoard = ({
 
                           {/* Action Buttons */}
                           <div className="flex gap-2 mt-4">
-                            <Button
-                              variant="glass"
-                              size="sm"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSkip();
-                              }}
-                            >
+                            <Button variant="glass" size="sm" className="flex-1" onClick={e => {
+                      e.stopPropagation();
+                      handleSkip();
+                    }}>
                               <SkipForward className="h-4 w-4 mr-1" />
                               Skip
                             </Button>
-                            <Button
-                              variant="gold"
-                              size="sm"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleComplete();
-                              }}
-                            >
+                            <Button variant="gold" size="sm" className="flex-1" onClick={e => {
+                      e.stopPropagation();
+                      handleComplete();
+                    }}>
                               <Check className="h-4 w-4 mr-1" />
                               Done
                             </Button>
                           </div>
-                        </motion.div>
-                      )}
+                        </motion.div>}
                     </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
+                  </motion.div>}
+              </motion.div>}
 
             {/* Phase 4: Round Complete */}
-            {gamePhase === "round-complete" && (
-              <motion.div
-                key="round-complete"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="text-center"
-              >
+            {gamePhase === "round-complete" && <motion.div key="round-complete" initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} exit={{
+            opacity: 0,
+            y: -20
+          }} className="text-center">
                 <div className="text-6xl mb-4">✨</div>
                 <h2 className="font-display text-2xl text-foreground mb-2">Challenge Complete!</h2>
                 <p className="text-muted-foreground mb-6">Ready for the next round?</p>
@@ -472,16 +415,11 @@ const GameBoard = ({
                   </div>
                 </div>
 
-                <Button
-                  variant="gold"
-                  size="lg"
-                  onClick={handleNewRound}
-                >
+                <Button variant="gold" size="lg" onClick={handleNewRound}>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Next Round
                 </Button>
-              </motion.div>
-            )}
+              </motion.div>}
           </AnimatePresence>
         </main>
 
@@ -491,17 +429,9 @@ const GameBoard = ({
             {/* Current Player Info */}
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-secondary/30">
-                {currentPlayer.photo ? (
-                  <img
-                    src={currentPlayer.photo}
-                    alt={currentPlayer.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-muted text-sm font-semibold text-muted-foreground">
+                {currentPlayer.photo ? <img src={currentPlayer.photo} alt={currentPlayer.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-muted text-sm font-semibold text-muted-foreground">
                     {currentPlayer.name.charAt(0)}
-                  </div>
-                )}
+                  </div>}
               </div>
               <div>
                 <p className="font-medium text-foreground">{currentPlayer.name}</p>
@@ -510,21 +440,17 @@ const GameBoard = ({
             </div>
 
             {/* Online Mode: Quick Messages */}
-            {mode === "online" && (
-              <div className="flex gap-2">
+            {mode === "online" && <div className="flex gap-2">
                 <Button variant="glass" size="icon">
                   <MessageCircle className="h-4 w-4" />
                 </Button>
                 <Button variant="glass" size="icon">
                   <Smile className="h-4 w-4" />
                 </Button>
-              </div>
-            )}
+              </div>}
           </div>
         </footer>
       </div>
-    </motion.div>
-  );
+    </motion.div>;
 };
-
 export default GameBoard;
