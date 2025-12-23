@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { 
   ALL_PROMPTS, 
   TruthDarePrompt, 
@@ -6,8 +6,24 @@ import {
   Mood, 
   RelationshipStatus, 
   IntensityLevel,
-  PromptType 
+  PromptType,
+  PROMPT_COUNT
 } from '@/data/truthDareContent';
+import {
+  shuffleArray,
+  getShortTermHistory,
+  getLongTermHistory,
+  getCategoryHistory,
+  getUsageMap,
+  getShuffledDeck,
+  saveShuffledDeck,
+  getDeckConfig,
+  saveDeckConfig,
+  filterByCategory,
+  weightedRandomSelect,
+  recordPromptUsage,
+  getHistoryStats
+} from '@/lib/promptWeighting';
 
 interface EngineConfig {
   mode: GameMode;
@@ -21,130 +37,191 @@ interface EngineState {
   consecutiveSkips: number;
   roundsPlayed: number;
   winStreak: number;
+  lifetimePromptsServed: number;
 }
-
-// Long-term storage key for cross-session history
-const LONG_TERM_HISTORY_KEY = 'royal_ishq_prompt_history';
-const MAX_LONG_TERM_HISTORY = 200;
-
-// Get long-term history from localStorage
-const getLongTermHistory = (): string[] => {
-  try {
-    const stored = localStorage.getItem(LONG_TERM_HISTORY_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-// Save to long-term history
-const saveLongTermHistory = (history: string[]) => {
-  try {
-    // Keep only the most recent prompts
-    const trimmed = history.slice(-MAX_LONG_TERM_HISTORY);
-    localStorage.setItem(LONG_TERM_HISTORY_KEY, JSON.stringify(trimmed));
-  } catch {
-    // Silent fail for localStorage issues
-  }
-};
 
 export function useTruthDareEngine(config: EngineConfig) {
   const { mode, mood, status } = config;
   
-  const [state, setState] = useState<EngineState>({
+  const [state, setState] = useState<EngineState>(() => ({
     currentIntensity: 1,
     sessionHistory: new Set<string>(),
     consecutiveSkips: 0,
     roundsPlayed: 0,
     winStreak: 0,
-  });
+    lifetimePromptsServed: 0,
+  }));
 
-  const longTermHistoryRef = useRef<string[]>(getLongTermHistory());
+  // Ref to track if deck needs reshuffling
+  const deckConfigRef = useRef<{ mode: string; mood: string; status: string } | null>(null);
 
-  // Filter prompts based on all four mandatory filters
-  const getFilteredPrompts = useCallback((type: PromptType, intensity: IntensityLevel): TruthDarePrompt[] => {
+  // Filter prompts based on mode, mood, status (base filter)
+  const baseFilteredPrompts = useMemo(() => {
     return ALL_PROMPTS.filter(prompt => 
-      prompt.type === type &&
       prompt.mode === mode &&
       prompt.mood === mood &&
-      prompt.status === status &&
-      prompt.intensity <= intensity // Allow prompts at or below current intensity
+      prompt.status === status
     );
   }, [mode, mood, status]);
 
-  // Anti-repetition: Check if prompt was used recently
-  const isPromptAvailable = useCallback((promptId: string): boolean => {
-    // Check session history (no repeats within session)
-    if (state.sessionHistory.has(promptId)) {
-      return false;
-    }
+  // Check if deck config changed and needs reshuffle
+  const needsReshuffle = useCallback((): boolean => {
+    const currentConfig = getDeckConfig();
+    if (!currentConfig) return true;
     
-    // Check long-term history (rare repeats after many sessions)
-    const longTermIndex = longTermHistoryRef.current.indexOf(promptId);
-    if (longTermIndex !== -1) {
-      // Allow if it's been at least 50 prompts since last use
-      return longTermHistoryRef.current.length - longTermIndex > 50;
-    }
-    
-    return true;
-  }, [state.sessionHistory]);
+    return (
+      currentConfig.mode !== mode ||
+      currentConfig.mood !== mood ||
+      currentConfig.status !== status
+    );
+  }, [mode, mood, status]);
 
-  // Get a random prompt with anti-repetition
+  // Create or get shuffled deck
+  const getOrCreateDeck = useCallback((type: PromptType, intensity: IntensityLevel): TruthDarePrompt[] => {
+    // If config changed, we need fresh filtering
+    if (needsReshuffle()) {
+      saveDeckConfig({
+        mode,
+        mood,
+        status,
+        lastShuffleTime: Date.now()
+      });
+      // Clear old deck since config changed
+      saveShuffledDeck([]);
+    }
+
+    // Get existing deck
+    let deck = getShuffledDeck();
+    
+    // Filter deck to match current type and intensity
+    deck = deck.filter(p => 
+      p.type === type && 
+      p.intensity <= intensity &&
+      !state.sessionHistory.has(p.id)
+    );
+
+    // If deck is empty or too small, reshuffle from base
+    if (deck.length < 3) {
+      const eligiblePrompts = baseFilteredPrompts.filter(p => 
+        p.type === type && 
+        p.intensity <= intensity &&
+        !state.sessionHistory.has(p.id)
+      );
+      
+      // Shuffle the eligible prompts
+      deck = shuffleArray(eligiblePrompts);
+      saveShuffledDeck(deck);
+    }
+
+    return deck;
+  }, [mode, mood, status, baseFilteredPrompts, needsReshuffle, state.sessionHistory]);
+
+  // Get a random prompt with multi-layer anti-repetition
   const getPrompt = useCallback((type: PromptType): TruthDarePrompt | null => {
     const intensity = state.currentIntensity;
     
-    // Try to find an available prompt, starting from current intensity and going down
-    for (let i = intensity; i >= 1; i--) {
-      const filtered = getFilteredPrompts(type, i as IntensityLevel);
-      const available = filtered.filter(p => isPromptAvailable(p.id));
-      
-      if (available.length > 0) {
-        // Random selection from available prompts
-        const randomIndex = Math.floor(Math.random() * available.length);
-        const selected = available[randomIndex];
-        
-        // Update session history
+    // Get or create shuffled deck
+    const deck = getOrCreateDeck(type, intensity);
+    
+    if (deck.length === 0) {
+      // Fallback: if even shuffled deck is empty, reset session and try again
+      if (state.sessionHistory.size > 0) {
         setState(prev => ({
           ...prev,
-          sessionHistory: new Set([...prev.sessionHistory, selected.id]),
-          roundsPlayed: prev.roundsPlayed + 1,
+          sessionHistory: new Set<string>(),
         }));
         
-        // Update long-term history
-        longTermHistoryRef.current.push(selected.id);
-        saveLongTermHistory(longTermHistoryRef.current);
+        // Get fresh deck with cleared session
+        const freshPrompts = baseFilteredPrompts.filter(p => 
+          p.type === type && p.intensity <= intensity
+        );
         
-        return selected;
+        if (freshPrompts.length > 0) {
+          const shuffled = shuffleArray(freshPrompts);
+          const selected = shuffled[0];
+          recordPromptUsage(selected.id, selected.category);
+          saveShuffledDeck(shuffled.slice(1));
+          
+          setState(prev => ({
+            ...prev,
+            sessionHistory: new Set([selected.id]),
+            roundsPlayed: prev.roundsPlayed + 1,
+            lifetimePromptsServed: prev.lifetimePromptsServed + 1,
+          }));
+          
+          return selected;
+        }
       }
+      return null;
     }
+
+    // Apply category rotation filter
+    const categoryHistory = getCategoryHistory();
+    let filteredDeck = filterByCategory(deck, categoryHistory);
     
-    // If no available prompts (all used), reset session history and try again
-    if (state.sessionHistory.size > 0) {
-      setState(prev => ({
-        ...prev,
-        sessionHistory: new Set<string>(),
-      }));
-      
-      const filtered = getFilteredPrompts(type, intensity);
-      if (filtered.length > 0) {
-        const randomIndex = Math.floor(Math.random() * filtered.length);
-        return filtered[randomIndex];
+    // If category filter is too restrictive, use full deck
+    if (filteredDeck.length === 0) {
+      filteredDeck = deck;
+    }
+
+    // Apply weighted random selection for extra anti-repetition
+    const shortTermHistory = getShortTermHistory();
+    const longTermHistory = getLongTermHistory();
+    const usageMap = getUsageMap();
+    
+    const selected = weightedRandomSelect(
+      filteredDeck,
+      shortTermHistory,
+      longTermHistory,
+      usageMap
+    );
+
+    if (!selected) {
+      // Ultimate fallback: just take first from deck
+      const fallback = deck[0];
+      if (fallback) {
+        recordPromptUsage(fallback.id, fallback.category);
+        saveShuffledDeck(deck.slice(1));
+        
+        setState(prev => ({
+          ...prev,
+          sessionHistory: new Set([...prev.sessionHistory, fallback.id]),
+          roundsPlayed: prev.roundsPlayed + 1,
+          lifetimePromptsServed: prev.lifetimePromptsServed + 1,
+        }));
+        
+        return fallback;
       }
+      return null;
     }
+
+    // Record usage in all history layers
+    recordPromptUsage(selected.id, selected.category);
     
-    return null;
-  }, [state.currentIntensity, state.sessionHistory, getFilteredPrompts, isPromptAvailable]);
+    // Remove selected from deck and save
+    const remainingDeck = deck.filter(p => p.id !== selected.id);
+    saveShuffledDeck(remainingDeck);
+
+    // Update session state
+    setState(prev => ({
+      ...prev,
+      sessionHistory: new Set([...prev.sessionHistory, selected.id]),
+      roundsPlayed: prev.roundsPlayed + 1,
+      lifetimePromptsServed: prev.lifetimePromptsServed + 1,
+    }));
+
+    return selected;
+  }, [state.currentIntensity, state.sessionHistory, baseFilteredPrompts, getOrCreateDeck]);
 
   // Handle user completing a prompt (increases intensity over time)
   const onPromptCompleted = useCallback(() => {
     setState(prev => {
-      const newRounds = prev.roundsPlayed;
       const newWinStreak = prev.winStreak + 1;
       
       // Natural intensity progression based on gameplay duration and win streaks
       let newIntensity = prev.currentIntensity;
       
-      // Increase intensity every 3-5 completed prompts
+      // Increase intensity every 4 completed prompts (smooth progression)
       if (newWinStreak % 4 === 0 && newIntensity < 5) {
         newIntensity = (newIntensity + 1) as IntensityLevel;
       }
@@ -195,12 +272,14 @@ export function useTruthDareEngine(config: EngineConfig) {
       consecutiveSkips: 0,
       roundsPlayed: 0,
       winStreak: 0,
+      lifetimePromptsServed: 0,
     });
+    // Don't clear localStorage histories - they persist across sessions
   }, []);
 
   // Get current intensity level (for UI display if needed)
   const getIntensityLabel = useCallback((): string => {
-    const labels = {
+    const labels: Record<IntensityLevel, string> = {
       1: 'Light & Playful',
       2: 'Getting Warmer',
       3: 'Deeper Connection',
@@ -209,6 +288,19 @@ export function useTruthDareEngine(config: EngineConfig) {
     };
     return labels[state.currentIntensity];
   }, [state.currentIntensity]);
+
+  // Get engine stats for debugging/display
+  const getEngineStats = useCallback(() => {
+    const historyStats = getHistoryStats();
+    return {
+      totalPrompts: PROMPT_COUNT,
+      filteredPrompts: baseFilteredPrompts.length,
+      sessionHistorySize: state.sessionHistory.size,
+      roundsPlayed: state.roundsPlayed,
+      currentIntensity: state.currentIntensity,
+      ...historyStats
+    };
+  }, [baseFilteredPrompts.length, state.sessionHistory.size, state.roundsPlayed, state.currentIntensity]);
 
   return {
     getPrompt,
@@ -220,5 +312,7 @@ export function useTruthDareEngine(config: EngineConfig) {
     getIntensityLabel,
     roundsPlayed: state.roundsPlayed,
     sessionHistorySize: state.sessionHistory.size,
+    totalPrompts: PROMPT_COUNT,
+    getEngineStats,
   };
 }
